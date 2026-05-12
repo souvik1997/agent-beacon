@@ -20,7 +20,6 @@ coverage.html
 cli/beacon/beacon
 cli/beacon/beacon-*
 cli/beacon/dist/
-cli/beacon/internal/embedded/hooks.bin
 
 # Hook helper binaries
 cli/beacon-hooks/beacon-hooks
