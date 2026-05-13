@@ -10,7 +10,21 @@ Beacon is visibility-first. The current public build focuses on observing local
 agent runtime activity, normalizing it into endpoint events, and leaving
 forwarding to existing localfile/Wazuh or customer-managed pipelines.
 
-## What It Captures
+## Table Of Contents
+
+- [What Beacon Does](#what-beacon-does)
+- [Privacy And Retention](#privacy-and-retention)
+- [What Beacon Does Not Do](#what-beacon-does-not-do)
+- [Quick Start](#quick-start)
+- [Optional Integrations](#optional-integrations)
+- [Claude Cowork Durable Collector](#claude-cowork-durable-collector)
+- [Dashboard](#dashboard)
+- [Command Reference](#command-reference)
+- [Repository Layout](#repository-layout)
+- [Release Readiness](#release-readiness)
+- [Testing](#testing)
+
+## What Beacon Does
 
 Beacon can currently:
 
@@ -28,6 +42,8 @@ Beacon can currently:
   timelines, filters, and event details from the JSONL log.
 - Generate Wazuh localfile/rule content for the Beacon event schema.
 
+## Privacy And Retention
+
 Beacon records metadata by default. Content retention is configurable with:
 
 - `metadata`: default; no prompt text, raw attributes, command output, or raw
@@ -37,6 +53,8 @@ Beacon records metadata by default. Content retention is configurable with:
 - `full`: include configured content fields in local/customer-controlled logs,
   still subject to event size limits.
 
+## What Beacon Does Not Do
+
 Beacon does not currently provide kernel/process monitoring, shell history
 collection, cloud audit ingestion, browser/SaaS telemetry, credential-use
 attribution, MCP configuration inventory, or direct Datadog/Splunk/Elastic/etc.
@@ -44,45 +62,97 @@ exporters.
 
 ## Quick Start
 
-Build the CLI:
+### Build The CLI
 
 ```bash
 cd cli/beacon
 make build
 ```
 
-Install in user mode:
+### Install In User Mode
 
 ```bash
 ./beacon endpoint install --user
 ./beacon endpoint status
 ```
 
-Install with explicit content retention:
+### Set Content Retention
 
 ```bash
 ./beacon endpoint install --user --content-retention metadata
 ```
 
-Print Wazuh config and validate event output:
+### Configure Wazuh Output
 
 ```bash
 ./beacon endpoint wazuh print-config --user
 ./beacon endpoint wazuh validate --user
 ```
 
-Run the macOS endpoint smoke test:
+### Run The macOS Smoke Test
 
 ```bash
 sh packaging/macos/smoke-endpoint.sh
 ```
 
-Optional integrations:
+## Optional Integrations
+
+### Cursor Hooks
 
 ```bash
 ./beacon endpoint hooks install --harness cursor --user
-./beacon endpoint integrations claude-cowork print-config --user
 ```
+
+### Claude Cowork
+
+Claude Cowork OpenTelemetry export is configured in the Claude admin console and
+requires a Team/Enterprise admin.
+
+```bash
+./beacon endpoint integrations claude-cowork setup --endpoint https://collector.example.com --user --open
+./beacon endpoint integrations claude-cowork validate --user --since 10m
+```
+
+For local testing only, Beacon can create a temporary authenticated ngrok tunnel
+to the local OTLP HTTP receiver:
+
+```bash
+./beacon endpoint integrations claude-cowork setup --ngrok --user --open
+```
+
+## Claude Cowork Durable Collector
+
+Claude Cowork exports telemetry from Anthropic's service, so the OTLP endpoint
+must be reachable from the public internet. Do not use `127.0.0.1`, a laptop, or
+an ngrok URL for production monitoring.
+
+For ongoing use, run a customer-managed HTTPS OpenTelemetry Collector endpoint:
+
+```text
+https://otel.example.com
+```
+
+Configure Claude Cowork with:
+
+- `OTLP endpoint`: `https://otel.example.com`
+- `OTLP protocol`: `HTTP/protobuf`
+- `OTLP headers`: `Authorization=Bearer <customer-generated-token>`
+- `Resource attributes`: `deployment.environment=prod,service.name=claude-cowork`
+
+Recommended production shape:
+
+- Use a real DNS name with TLS, such as `https://otel.company.com`.
+- Require authentication at the public edge, commonly with an
+  `Authorization=Bearer ...` header.
+- Terminate TLS at a hardened reverse proxy or load balancer, then forward OTLP
+  HTTP paths such as `/v1/logs`, `/v1/metrics`, and `/v1/traces` to the
+  Collector's local `4318` receiver.
+- Treat Cowork telemetry as sensitive. Prompt text, tool parameters, file paths,
+  user email addresses, model usage, and errors may be present before Beacon
+  redaction/export.
+- Use `--ngrok` only for demos, validation, or local development.
+
+## Dashboard
 
 Run the local dashboard:
 
@@ -91,13 +161,10 @@ Run the local dashboard:
 ./beacon endpoint dashboard --user --open
 ```
 
-Uninstall:
+The dashboard binds to loopback by default and reads the local runtime JSONL log.
+It is intended for local inspection, not remote administration.
 
-```bash
-./beacon endpoint uninstall --user --keep-logs
-```
-
-## Commands
+## Command Reference
 
 - `beacon endpoint install`: configure the endpoint agent, Collector service, and Claude/Codex telemetry.
 - `beacon endpoint repair`: reapply service/config files and repair telemetry drift.
@@ -105,9 +172,15 @@ Uninstall:
 - `beacon endpoint discover`: list supported local AI runtimes.
 - `beacon endpoint dashboard`: run a localhost-only dashboard over the runtime JSONL log.
 - `beacon endpoint hooks`: install, check, or remove hook-based integrations such as Cursor.
-- `beacon endpoint integrations claude-cowork`: print setup and validate admin-configured Cowork OTLP export.
+- `beacon endpoint integrations claude-cowork`: set up and validate admin-configured Cowork OTLP export.
 - `beacon endpoint wazuh`: print/install Wazuh content and write a validation event.
 - `beacon endpoint uninstall`: stop services and remove managed endpoint files.
+
+Uninstall while keeping logs:
+
+```bash
+./beacon endpoint uninstall --user --keep-logs
+```
 
 ## Repository Layout
 
@@ -158,7 +231,7 @@ install with `--no-start`, validates status and Wazuh output, checks Cursor hook
 install/status, uninstalls, and preserves the runtime log long enough to assert
 expected events were written. The script skips automatically on non-macOS hosts.
 
-## Test
+## Testing
 
 ```bash
 cd cli/beacon

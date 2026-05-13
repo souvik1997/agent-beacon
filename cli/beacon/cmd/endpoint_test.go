@@ -31,6 +31,45 @@ func TestEndpointDashboardCommandRegistered(t *testing.T) {
 	}
 }
 
+func TestEndpointCoworkSetupCommandRegistered(t *testing.T) {
+	cmd, _, err := endpointCmd.Find([]string{"integrations", "claude-cowork", "setup"})
+	if err != nil {
+		t.Fatalf("Find cowork setup returned error: %v", err)
+	}
+	if cmd == nil || cmd.Use != "setup" {
+		t.Fatalf("cowork setup command not registered: %#v", cmd)
+	}
+	for _, name := range []string{"endpoint", "headers", "resource-attributes", "ngrok", "open"} {
+		if cmd.Flags().Lookup(name) == nil {
+			t.Fatalf("cowork setup command missing --%s flag", name)
+		}
+	}
+}
+
+func TestEndpointCoworkValidateSinceFlagRegistered(t *testing.T) {
+	cmd, _, err := endpointCmd.Find([]string{"integrations", "claude-cowork", "validate"})
+	if err != nil {
+		t.Fatalf("Find cowork validate returned error: %v", err)
+	}
+	if cmd.Flags().Lookup("since") == nil {
+		t.Fatal("cowork validate command missing --since flag")
+	}
+}
+
+func TestParseNgrokURL(t *testing.T) {
+	line := `lvl=info msg="started tunnel" obj=tunnels name=command_line addr=http://localhost:4318 url=https://abc-123.ngrok-free.app`
+	if got, want := parseNgrokURL(line), "https://abc-123.ngrok-free.app"; got != want {
+		t.Fatalf("parseNgrokURL = %q, want %q", got, want)
+	}
+}
+
+func TestBasicAuthHeader(t *testing.T) {
+	got := basicAuthHeader("beacon", "secret")
+	if got != "Authorization=Basic YmVhY29uOnNlY3JldA==" {
+		t.Fatalf("basicAuthHeader = %q", got)
+	}
+}
+
 func TestEndpointHarnessDefaultsDoNotClobberInstall(t *testing.T) {
 	installFlag := endpointInstallCmd.Flags().Lookup("harness")
 	if installFlag == nil {
