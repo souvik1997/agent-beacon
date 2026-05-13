@@ -50,9 +50,16 @@ that may need review.
 ./beacon endpoint hooks install --harness cursor --user
 ./beacon endpoint hooks status --harness cursor --user
 
-./beacon endpoint integrations claude-cowork print-config --user
-./beacon endpoint integrations claude-cowork validate --user
+./beacon endpoint integrations claude-cowork setup --endpoint https://collector.example.com --user --open
+./beacon endpoint integrations claude-cowork setup --ngrok --user --open
+./beacon endpoint integrations claude-cowork validate --user --since 10m
 ```
+
+Claude Cowork monitoring is configured in the Claude admin console at
+`https://claude.ai/admin-settings/cowork`. The OTLP endpoint must be reachable
+by Claude Cowork, so use a durable public HTTPS Collector endpoint for ongoing
+monitoring. The `--ngrok` mode is for short-lived local testing and prints an
+authenticated tunnel URL plus the matching `Authorization` header.
 
 ## Test
 

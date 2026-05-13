@@ -81,8 +81,14 @@ Optional integrations:
 
 ```bash
 ./beacon endpoint hooks install --harness cursor --user
-./beacon endpoint integrations claude-cowork print-config --user
+./beacon endpoint integrations claude-cowork setup --endpoint https://collector.example.com --user --open
+./beacon endpoint integrations claude-cowork setup --ngrok --user --open
 ```
+
+Claude Cowork OpenTelemetry export is configured in the Claude admin console and
+requires a Team/Enterprise admin. Use `--endpoint` for a durable public HTTPS
+Collector endpoint. Use `--ngrok` only for a temporary authenticated local test
+tunnel to Beacon's local OTLP HTTP receiver.
 
 Run the local dashboard:
 
@@ -105,7 +111,7 @@ Uninstall:
 - `beacon endpoint discover`: list supported local AI runtimes.
 - `beacon endpoint dashboard`: run a localhost-only dashboard over the runtime JSONL log.
 - `beacon endpoint hooks`: install, check, or remove hook-based integrations such as Cursor.
-- `beacon endpoint integrations claude-cowork`: print setup and validate admin-configured Cowork OTLP export.
+- `beacon endpoint integrations claude-cowork`: set up and validate admin-configured Cowork OTLP export.
 - `beacon endpoint wazuh`: print/install Wazuh content and write a validation event.
 - `beacon endpoint uninstall`: stop services and remove managed endpoint files.
 

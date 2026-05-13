@@ -21,23 +21,28 @@ import (
 )
 
 var endpointOpts struct {
-	userMode         bool
-	logPath          string
-	harnesses        string
-	hookHarnesses    string
-	outputDir        string
-	jsonOutput       bool
-	grpcPort         int
-	httpPort         int
-	collectorPath    string
-	keepLogs         bool
-	keepConfig       bool
-	noStart          bool
-	coworkHeaders    string
-	hookLevel        string
-	contentRetention string
-	dashboardAddr    string
-	dashboardOpen    bool
+	userMode                 bool
+	logPath                  string
+	harnesses                string
+	hookHarnesses            string
+	outputDir                string
+	jsonOutput               bool
+	grpcPort                 int
+	httpPort                 int
+	collectorPath            string
+	keepLogs                 bool
+	keepConfig               bool
+	noStart                  bool
+	coworkHeaders            string
+	coworkEndpoint           string
+	coworkResourceAttributes string
+	coworkNgrok              bool
+	coworkOpen               bool
+	coworkSince              string
+	hookLevel                string
+	contentRetention         string
+	dashboardAddr            string
+	dashboardOpen            bool
 }
 
 var endpointCmd = &cobra.Command{
@@ -135,11 +140,25 @@ var endpointCoworkPrintConfigCmd = &cobra.Command{
 	Short: "Print Claude Cowork OTLP setup guidance",
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := loadOrDefaultConfig()
+		endpoint := endpointOpts.coworkEndpoint
+		if endpoint == "" {
+			endpoint = fmt.Sprintf("http://127.0.0.1:%d", cfg.Collector.HTTPPort)
+		}
 		fmt.Print(cowork.PrintConfig(cowork.Config{
-			Endpoint: fmt.Sprintf("http://127.0.0.1:%d", cfg.Collector.HTTPPort),
-			Protocol: "HTTP/protobuf",
-			Headers:  endpointOpts.coworkHeaders,
+			Endpoint:           endpoint,
+			Protocol:           "HTTP/protobuf",
+			Headers:            endpointOpts.coworkHeaders,
+			ResourceAttributes: endpointOpts.coworkResourceAttributes,
 		}))
+	},
+}
+
+var endpointCoworkSetupCmd = &cobra.Command{
+	Use:          "setup",
+	Short:        "Print or create Claude Cowork OTLP admin settings",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runEndpointCoworkSetup(cmd.Context())
 	},
 }
 
@@ -153,7 +172,11 @@ var endpointCoworkStatusCmd = &cobra.Command{
 			_ = json.NewEncoder(os.Stdout).Encode(status)
 			return
 		}
-		fmt.Printf("%s: detected=%t observed=%t\n", status.DisplayName, status.Detected, status.LastEventObserved)
+		fmt.Printf("%s: detected=%t observed=%t", status.DisplayName, status.Detected, status.LastEventObserved)
+		if status.LastEventObservedAt != "" {
+			fmt.Printf(" last=%s", status.LastEventObservedAt)
+		}
+		fmt.Println()
 		fmt.Println(status.Message)
 	},
 }
@@ -162,20 +185,7 @@ var endpointCoworkValidateCmd = &cobra.Command{
 	Use:          "validate",
 	Short:        "Validate whether Claude Cowork events are arriving",
 	SilenceUsage: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := loadOrDefaultConfig()
-		status := cowork.GetStatus(cfg.LogPath)
-		if !status.LastEventObserved {
-			fmt.Print(cowork.PrintConfig(cowork.Config{
-				Endpoint: fmt.Sprintf("http://127.0.0.1:%d", cfg.Collector.HTTPPort),
-				Protocol: "HTTP/protobuf",
-				Headers:  endpointOpts.coworkHeaders,
-			}))
-			return fmt.Errorf("no Claude Cowork events observed in %s", cfg.LogPath)
-		}
-		fmt.Println("Claude Cowork events observed in endpoint runtime log.")
-		return nil
-	},
+	RunE:         func(cmd *cobra.Command, args []string) error { return runEndpointCoworkValidate() },
 }
 
 var endpointWazuhPrintConfigCmd = &cobra.Command{
@@ -231,6 +241,7 @@ func init() {
 	endpointHooksCmd.AddCommand(endpointHooksUninstallCmd)
 	endpointHooksCmd.AddCommand(endpointHooksStatusCmd)
 	endpointCoworkCmd.AddCommand(endpointCoworkPrintConfigCmd)
+	endpointCoworkCmd.AddCommand(endpointCoworkSetupCmd)
 	endpointCoworkCmd.AddCommand(endpointCoworkStatusCmd)
 	endpointCoworkCmd.AddCommand(endpointCoworkValidateCmd)
 
@@ -264,12 +275,22 @@ func init() {
 	endpointWazuhInstallPackCmd.Flags().StringVar(&endpointOpts.logPath, "log-path", "", "Runtime JSONL log path")
 	endpointWazuhValidateCmd.Flags().BoolVar(&endpointOpts.userMode, "user", false, "Use per-user endpoint paths instead of system paths")
 	endpointWazuhValidateCmd.Flags().StringVar(&endpointOpts.logPath, "log-path", "", "Runtime JSONL log path")
-	for _, c := range []*cobra.Command{endpointCoworkPrintConfigCmd, endpointCoworkStatusCmd, endpointCoworkValidateCmd} {
+	for _, c := range []*cobra.Command{endpointCoworkPrintConfigCmd, endpointCoworkSetupCmd, endpointCoworkStatusCmd, endpointCoworkValidateCmd} {
 		c.Flags().BoolVar(&endpointOpts.userMode, "user", false, "Use per-user endpoint paths instead of system paths")
 		c.Flags().StringVar(&endpointOpts.logPath, "log-path", "", "Runtime JSONL log path")
 	}
 	endpointCoworkPrintConfigCmd.Flags().StringVar(&endpointOpts.coworkHeaders, "headers", "", "Optional OTLP headers to show in setup guidance")
+	endpointCoworkPrintConfigCmd.Flags().StringVar(&endpointOpts.coworkEndpoint, "endpoint", "", "Public OTLP HTTPS endpoint to show in setup guidance")
+	endpointCoworkPrintConfigCmd.Flags().StringVar(&endpointOpts.coworkResourceAttributes, "resource-attributes", "", "Optional Claude Cowork resource attributes")
+	endpointCoworkSetupCmd.Flags().StringVar(&endpointOpts.coworkEndpoint, "endpoint", "", "Public OTLP HTTPS endpoint reachable by Claude Cowork")
+	endpointCoworkSetupCmd.Flags().StringVar(&endpointOpts.coworkHeaders, "headers", "", "Optional OTLP headers for the Claude admin settings")
+	endpointCoworkSetupCmd.Flags().StringVar(&endpointOpts.coworkResourceAttributes, "resource-attributes", "", "Optional Claude Cowork resource attributes")
+	endpointCoworkSetupCmd.Flags().BoolVar(&endpointOpts.coworkNgrok, "ngrok", false, "Create a temporary authenticated ngrok tunnel to the local OTLP HTTP receiver")
+	endpointCoworkSetupCmd.Flags().BoolVar(&endpointOpts.coworkOpen, "open", false, "Open Claude Cowork admin settings in a browser")
 	endpointCoworkValidateCmd.Flags().StringVar(&endpointOpts.coworkHeaders, "headers", "", "Optional OTLP headers to show when validation fails")
+	endpointCoworkValidateCmd.Flags().StringVar(&endpointOpts.coworkEndpoint, "endpoint", "", "Public OTLP HTTPS endpoint to show when validation fails")
+	endpointCoworkValidateCmd.Flags().StringVar(&endpointOpts.coworkResourceAttributes, "resource-attributes", "", "Optional Claude Cowork resource attributes")
+	endpointCoworkValidateCmd.Flags().StringVar(&endpointOpts.coworkSince, "since", "", "Require a Claude Cowork event within this duration, such as 10m")
 	endpointCoworkStatusCmd.Flags().BoolVar(&endpointOpts.jsonOutput, "json", false, "Print status as JSON")
 	for _, c := range []*cobra.Command{endpointHooksInstallCmd, endpointHooksUninstallCmd, endpointHooksStatusCmd} {
 		c.Flags().BoolVar(&endpointOpts.userMode, "user", false, "Use per-user endpoint paths instead of system paths")
