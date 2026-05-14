@@ -11,7 +11,7 @@ make build
 ## Common Commands
 
 ```bash
-./beacon endpoint install
+./beacon endpoint install --collector /path/to/beacon-otelcol
 ./beacon endpoint status --json
 ./beacon endpoint discover --json
 ./beacon endpoint repair
@@ -21,7 +21,8 @@ make build
 
 Endpoint commands use per-user paths by default so hook and OTLP telemetry share
 `~/.beacon/endpoint/logs/runtime.jsonl`. Use `--system` for root-managed
-deployment paths.
+deployment paths. Endpoint install requires Beacon's custom `beacon-otelcol`
+collector, provided by the macOS package or passed with `--collector`.
 
 ## Dashboard
 

@@ -84,8 +84,10 @@ brews:
     install: |
       bin.install "beacon"
     caveats: |
-      To configure local endpoint telemetry, run:
-        beacon endpoint install
+      The Homebrew formula installs the beacon CLI only. Endpoint telemetry also
+      requires the custom beacon-otelcol collector; install the macOS package
+      that includes it, place beacon-otelcol on PATH, or pass:
+        beacon endpoint install --collector /path/to/beacon-otelcol
     test: |
       system "#{bin}/beacon", "version"
 
@@ -110,7 +112,8 @@ release:
 
     ## Quick Start
     ```bash
-    beacon endpoint install
+    # Endpoint telemetry requires the custom beacon-otelcol collector.
+    beacon endpoint install --collector /path/to/beacon-otelcol
     beacon endpoint status
     beacon endpoint wazuh print-config
     ```

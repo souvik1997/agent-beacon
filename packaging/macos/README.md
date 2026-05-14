@@ -52,10 +52,15 @@ service.
 ## Manual Install
 
 ```bash
-sudo beacon endpoint install
+sudo beacon endpoint install --system --collector /opt/beacon/bin/beacon-otelcol
 beacon endpoint status
 beacon endpoint wazuh print-config
 ```
+
+Endpoint installs require Beacon's custom `beacon-otelcol` collector because the
+generated Collector config uses the `beaconjson` exporter. The macOS package
+installs it at `/opt/beacon/bin/beacon-otelcol`; CLI-only installs must place
+`beacon-otelcol` on `PATH` or pass `--collector`.
 
 ## Smoke Test
 
