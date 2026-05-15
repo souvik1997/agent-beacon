@@ -30,19 +30,30 @@ if [ ! -x "$COLLECTOR_BIN" ]; then
 fi
 
 mkdir -p "$OUT_DIR" "$PKG_ROOT/opt/beacon/bin" "$PKG_ROOT/opt/beacon/scripts" \
-  "$PKG_ROOT/opt/beacon/jamf" "$PKG_SCRIPTS"
+  "$PKG_ROOT/opt/beacon/jamf" "$PKG_ROOT/opt/beacon/fleet" "$PKG_SCRIPTS"
 
 cp "$BEACON_BIN" "$PKG_ROOT/opt/beacon/bin/beacon"
 cp "$COLLECTOR_BIN" "$PKG_ROOT/opt/beacon/bin/beacon-otelcol"
 cp "$ROOT_DIR/packaging/macos/install-endpoint.sh" "$PKG_ROOT/opt/beacon/scripts/install-endpoint.sh"
 cp "$ROOT_DIR/packaging/macos/uninstall-endpoint.sh" "$PKG_ROOT/opt/beacon/scripts/uninstall-endpoint.sh"
-cp -R "$ROOT_DIR/packaging/macos/jamf/." "$PKG_ROOT/opt/beacon/jamf/"
 cp "$ROOT_DIR/packaging/macos/scripts/postinstall" "$PKG_SCRIPTS/postinstall"
 cp "$ROOT_DIR/packaging/macos/scripts/preinstall" "$PKG_SCRIPTS/preinstall"
 
+if command -v ditto >/dev/null 2>&1; then
+  ditto --norsrc "$ROOT_DIR/packaging/macos/jamf" "$PKG_ROOT/opt/beacon/jamf"
+  ditto --norsrc "$ROOT_DIR/packaging/macos/fleet" "$PKG_ROOT/opt/beacon/fleet"
+else
+  cp -R "$ROOT_DIR/packaging/macos/jamf/." "$PKG_ROOT/opt/beacon/jamf/"
+  cp -R "$ROOT_DIR/packaging/macos/fleet/." "$PKG_ROOT/opt/beacon/fleet/"
+fi
+
 if [ -d "$ROOT_DIR/cli/beacon/internal/endpoint/wazuh/pack" ]; then
   mkdir -p "$PKG_ROOT/opt/beacon/wazuh"
-  cp -R "$ROOT_DIR/cli/beacon/internal/endpoint/wazuh/pack/." "$PKG_ROOT/opt/beacon/wazuh/"
+  if command -v ditto >/dev/null 2>&1; then
+    ditto --norsrc "$ROOT_DIR/cli/beacon/internal/endpoint/wazuh/pack" "$PKG_ROOT/opt/beacon/wazuh"
+  else
+    cp -R "$ROOT_DIR/cli/beacon/internal/endpoint/wazuh/pack/." "$PKG_ROOT/opt/beacon/wazuh/"
+  fi
 fi
 
 find "$PKG_ROOT" -name '._*' -delete
@@ -50,6 +61,7 @@ find "$PKG_ROOT" -name '._*' -delete
 chmod 755 "$PKG_ROOT/opt/beacon/bin/beacon" "$PKG_ROOT/opt/beacon/bin/beacon-otelcol"
 chmod 755 "$PKG_ROOT/opt/beacon/scripts/install-endpoint.sh" "$PKG_ROOT/opt/beacon/scripts/uninstall-endpoint.sh"
 find "$PKG_ROOT/opt/beacon/jamf" -type f -name '*.sh' -exec chmod 755 {} \;
+find "$PKG_ROOT/opt/beacon/fleet" -type f -name '*.sh' -exec chmod 755 {} \;
 chmod 755 "$PKG_SCRIPTS/postinstall" "$PKG_SCRIPTS/preinstall"
 find "$PKG_ROOT" -name '._*' -delete
 if command -v xattr >/dev/null 2>&1; then
@@ -67,7 +79,7 @@ if [ -n "${PKG_SIGN_IDENTITY:-}" ]; then
     --identifier "$PKG_IDENTIFIER" \
     --version "$VERSION" \
     --install-location / \
-    --filter '/\._[^/]*$' \
+    --filter '(^|/)\._[^/]*$' \
     --filter '/\.DS_Store$' \
     --filter '(^|/)CVS($|/)' \
     --filter '(^|/)\.svn($|/)' \
@@ -80,7 +92,7 @@ else
     --identifier "$PKG_IDENTIFIER" \
     --version "$VERSION" \
     --install-location / \
-    --filter '/\._[^/]*$' \
+    --filter '(^|/)\._[^/]*$' \
     --filter '/\.DS_Store$' \
     --filter '(^|/)CVS($|/)' \
     --filter '(^|/)\.svn($|/)' \

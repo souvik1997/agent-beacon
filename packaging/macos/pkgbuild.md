@@ -6,12 +6,13 @@ installs:
 - `beacon`
 - `beacon-otelcol`
 - Jamf policy scripts and Extension Attributes
+- Fleet scripts and osquery policy/label examples
 - Wazuh content pack files for admins that want to import examples/rules
 
 `beacon-hooks` is embedded in the `beacon` binary for Cursor hook installation.
 Do not configure Cursor hooks during the base package install; use the Jamf
-`install-cursor-hooks.sh` helper so the command runs in the target user's
-context.
+`install-cursor-hooks.sh` helper or an equivalent Fleet user-context script so
+the command runs in the target user's context.
 
 ## Build Inputs
 
@@ -72,7 +73,8 @@ NOTARYTOOL_PROFILE="beacon-notary-profile" \
 
 The package installs files under `/opt/beacon` and runs
 `/opt/beacon/scripts/install-endpoint.sh` in `postinstall` with explicit
-collector and retention settings.
+collector and retention settings. The default packaged content retention is
+`full`, matching the shared MDM install wrapper.
 
 ## Jamf Deployment
 
@@ -96,6 +98,19 @@ Upload Extension Attributes from
 unhealthy, stale, or misconfigured endpoints. Scope `repair.sh` to those Smart
 Groups for automated remediation.
 
+## Fleet Deployment
+
+Upload the generated `.pkg` as Fleet software and scope it to a pilot team or
+label. For default deployment, no post-install script is required because the
+package postinstall performs the system install.
+
+Fleet remediation and validation scripts are packaged under
+`/opt/beacon/fleet/scripts`, and osquery examples are packaged under
+`/opt/beacon/fleet/queries`. Use the queries as Fleet policies or labels for
+missing, unhealthy, stale, or misconfigured endpoints. Scope `repair.sh` to
+hosts that fail the collector health, log freshness, retention, or log
+writability policies.
+
 Release gates:
 
 - `sh packaging/macos/test-endpoint-scripts.sh` passes
@@ -107,4 +122,5 @@ Release gates:
 - `sudo launchctl print system/com.beacon.endpoint.collector` reports the
   collector service as loaded/running
 - Jamf Extension Attributes report expected values after a recon
+- Fleet queries report expected values after host detail refresh
 
