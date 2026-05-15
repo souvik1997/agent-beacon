@@ -1,17 +1,137 @@
-# Beacon Endpoint Agent
+<p align="center">
+  <img src="images/beacon-hero.png" alt="Beacon" width="860">
+</p>
 
-Local endpoint telemetry for AI agent runtimes.
+<h1 align="center">Asymptote Lab's Beacon</h1>
 
-Beacon Endpoint Agent configures local telemetry for tools like Claude Code,
-Codex CLI, Claude Cowork, and Cursor, then writes Wazuh-compatible JSONL logs.
-It runs local-only and does not require a Beacon account.
+<p align="center">
+  <strong>Unified endpoint telemetry for AI agents.</strong>
+</p>
 
-Read the [Beacon CLI documentation](https://docs.asymptotelabs.ai/cli) for setup
-guides and command details.
+<p align="center">
+  <a href="https://docs.asymptotelabs.ai/cli">Docs</a>
+  ·
+  <a href="#for-security-and-it-teams">For Security and IT Teams</a>
+  ·
+  <a href="#quick-start">Quick Start</a>
+  ·
+  <a href="#command-reference">Commands</a>
+</p>
 
-Beacon is visibility-first. The current public build focuses on observing local
-agent runtime activity, normalizing it into endpoint events, and leaving
-forwarding to existing localfile/Wazuh or customer-managed pipelines.
+<p align="center">
+  <img src="images/beacon-architecture.png" alt="Beacon endpoint architecture" width="860">
+</p>
+
+AI agents now take action directly on developer endpoints, but security teams
+often have little unified visibility into prompts, tools, approvals, commands,
+and file changes across local agent harnesses.
+
+Beacon runs locally on the endpoint, captures supported activity from Claude
+Code, Codex CLI, Claude Cowork, and Cursor, and normalizes it into
+Wazuh-compatible JSONL for existing localfile/Wazuh or customer-managed
+pipelines.
+
+### Why Teams Use Beacon
+
+- **Local-only by default:** no hosted account, remote policy fetch, or external
+  network dependency during normal endpoint collection.
+- **Built for AI runtimes:** captures supported Claude Code, Codex CLI, Cursor,
+  and Claude Cowork activity where those runtimes expose telemetry.
+- **Security-team friendly:** ships macOS package assets for Jamf Pro and Fleet
+  deployment, validation, repair, and inventory.
+- **SIEM-ready output:** writes Wazuh-compatible JSONL for local or
+  customer-managed forwarding.
+
+## Table Of Contents
+
+- [For Security and IT Teams](#for-security-and-it-teams)
+- [Product Vision](#product-vision)
+- [What Beacon Does](#what-beacon-does)
+- [Privacy And Retention](#privacy-and-retention)
+- [What Beacon Does Not Do](#what-beacon-does-not-do)
+- [Documentation](#documentation)
+- [Quick Start](#quick-start)
+- [Optional Integrations](#optional-integrations)
+- [Claude Cowork Durable Collector](#claude-cowork-durable-collector)
+- [Dashboard](#dashboard)
+- [Command Reference](#command-reference)
+- [Repository Layout](#repository-layout)
+- [Release Readiness](#release-readiness)
+- [Testing](#testing)
+
+## For Security and IT Teams
+
+Beacon can be deployed with macOS MDM using a signed and notarized `.pkg`. The
+package installs Beacon under `/opt/beacon`, creates system endpoint
+configuration, loads the local collector LaunchDaemon, and writes runtime JSONL
+to `/var/log/beacon-agent/runtime.jsonl`.
+
+The full Jamf and Fleet runbook lives in
+[`packaging/macos/README.md`](packaging/macos/README.md).
+
+### Jamf Pro
+
+1. Upload the `.pkg` from `dist/macos/` to Jamf Pro.
+2. Create a Policy scoped to a pilot Smart Group.
+3. Install the package. No script is required for the default install path.
+4. Upload Extension Attributes from
+   `packaging/macos/jamf/extension-attributes/`.
+5. Scope repair to unhealthy devices with `/opt/beacon/jamf/scripts/repair.sh`.
+
+Optional explicit install policy script:
+
+```bash
+/opt/beacon/jamf/scripts/install.sh "$@"
+```
+
+Jamf parameters:
+
+```text
+Parameter 4: harnesses, default claude,codex
+Parameter 5: content retention, default full
+Parameter 6: OTLP gRPC port, default 4317
+Parameter 7: OTLP HTTP port, default 4318
+Parameter 8: collector path, default /opt/beacon/bin/beacon-otelcol
+Parameter 9: no-start flag, accepts 1/true/yes
+```
+
+Validate a deployed Mac:
+
+```bash
+sudo /opt/beacon/bin/beacon endpoint status --json
+sudo /opt/beacon/bin/beacon endpoint wazuh validate
+sudo launchctl print system/com.beacon.endpoint.collector
+```
+
+### Fleet
+
+1. Upload the signed/notarized `.pkg` as Fleet software.
+2. Scope it to a pilot team or label.
+3. Install the package. No post-install script is required for the default path.
+4. Add queries from `packaging/macos/fleet/queries/` as Fleet policies or
+   labels.
+5. Use scripts from `/opt/beacon/fleet/scripts/` for validation, repair, or
+   uninstall workflows.
+
+Fleet install arguments:
+
+```text
+1: harnesses, default claude,codex
+2: content retention, default full
+3: OTLP gRPC port, default 4317
+4: OTLP HTTP port, default 4318
+5: collector path, default /opt/beacon/bin/beacon-otelcol
+6: no-start flag, accepts 1/true/yes
+```
+
+Validate with:
+
+```bash
+/opt/beacon/fleet/scripts/validate.sh
+```
+
+Cursor telemetry is deployed separately in the logged-in user's context; do not
+configure Cursor hooks from the base system package install.
 
 ## Product Vision
 
@@ -29,23 +149,6 @@ endpoint.
 
 Read more in
 [Introducing Beacon: Endpoint Telemetry for AI Agents](https://justindsouza.substack.com/p/introducing-beacon-endpoint-telemetry).
-
-## Table Of Contents
-
-- [Product Vision](#product-vision)
-- [What Beacon Does](#what-beacon-does)
-- [Privacy And Retention](#privacy-and-retention)
-- [What Beacon Does Not Do](#what-beacon-does-not-do)
-- [Documentation](#documentation)
-- [Quick Start](#quick-start)
-- [Install With Homebrew](#install-with-homebrew)
-- [Optional Integrations](#optional-integrations)
-- [Claude Cowork Durable Collector](#claude-cowork-durable-collector)
-- [Dashboard](#dashboard)
-- [Command Reference](#command-reference)
-- [Repository Layout](#repository-layout)
-- [Release Readiness](#release-readiness)
-- [Testing](#testing)
 
 ## What Beacon Does
 

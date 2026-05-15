@@ -6,13 +6,14 @@ INSTALL_SCRIPT="$ROOT_DIR/packaging/macos/install-endpoint.sh"
 UNINSTALL_SCRIPT="$ROOT_DIR/packaging/macos/uninstall-endpoint.sh"
 PKG_BUILD_SCRIPT="$ROOT_DIR/packaging/macos/build-pkg.sh"
 REPAIR_SCRIPT="$ROOT_DIR/packaging/macos/jamf/scripts/repair.sh"
+FLEET_REPAIR_SCRIPT="$ROOT_DIR/packaging/macos/fleet/scripts/repair.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 
 sh -n "$INSTALL_SCRIPT"
 sh -n "$UNINSTALL_SCRIPT"
 sh -n "$PKG_BUILD_SCRIPT"
-for script in "$ROOT_DIR"/packaging/macos/scripts/* "$ROOT_DIR"/packaging/macos/jamf/scripts/*.sh "$ROOT_DIR"/packaging/macos/jamf/extension-attributes/*.sh; do
+for script in "$ROOT_DIR"/packaging/macos/scripts/* "$ROOT_DIR"/packaging/macos/jamf/scripts/*.sh "$ROOT_DIR"/packaging/macos/jamf/extension-attributes/*.sh "$ROOT_DIR"/packaging/macos/fleet/scripts/*.sh; do
   sh -n "$script"
 done
 
@@ -92,6 +93,50 @@ case "$UNINSTALL_ARGS" in
   "endpoint uninstall --system --keep-logs --keep-config") ;;
   *)
     echo "unexpected Jamf positional uninstall args: $UNINSTALL_ARGS" >&2
+    exit 1
+    ;;
+esac
+
+BEACON_BIN="$STUB_BIN" \
+BEACON_INSTALL_SCRIPT="$INSTALL_SCRIPT" \
+STUB_LOG="$STUB_LOG" \
+"$ROOT_DIR/packaging/macos/fleet/scripts/install.sh" "cursor" "redacted" "7317" "7318" "/tmp/fleet-otelcol" "1"
+
+INSTALL_ARGS="$(cat "$STUB_LOG")"
+case "$INSTALL_ARGS" in
+  "endpoint install --system --harness cursor --content-retention redacted --otlp-grpc-port 7317 --otlp-http-port 7318 --collector /tmp/fleet-otelcol --no-start") ;;
+  *)
+    echo "unexpected Fleet positional install args: $INSTALL_ARGS" >&2
+    exit 1
+    ;;
+esac
+
+BEACON_BIN="$STUB_BIN" \
+BEACON_COLLECTOR="/tmp/beacon-otelcol" \
+STUB_LOG="$STUB_LOG" \
+"$FLEET_REPAIR_SCRIPT" "claude,cursor" "metadata" "8317" "8318"
+
+REPAIR_ARGS="$(cat "$STUB_LOG")"
+case "$REPAIR_ARGS" in
+  "endpoint repair --collector /tmp/beacon-otelcol --harness claude,cursor --content-retention metadata --otlp-grpc-port 8317 --otlp-http-port 8318") ;;
+  *)
+    echo "unexpected Fleet positional repair args: $REPAIR_ARGS" >&2
+    exit 1
+    ;;
+esac
+
+BEACON_BIN="$STUB_BIN" \
+BEACON_KEEP_LOGS="1" \
+BEACON_KEEP_CONFIG="1" \
+BEACON_UNINSTALL_SCRIPT="$UNINSTALL_SCRIPT" \
+STUB_LOG="$STUB_LOG" \
+"$ROOT_DIR/packaging/macos/fleet/scripts/uninstall.sh"
+
+UNINSTALL_ARGS="$(cat "$STUB_LOG")"
+case "$UNINSTALL_ARGS" in
+  "endpoint uninstall --system --keep-logs --keep-config") ;;
+  *)
+    echo "unexpected Fleet uninstall args with keep logs: $UNINSTALL_ARGS" >&2
     exit 1
     ;;
 esac
