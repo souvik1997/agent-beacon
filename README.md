@@ -25,7 +25,7 @@ often have little unified visibility into prompts, tools, approvals, commands,
 and file changes across local agent harnesses.
 
 Beacon runs locally on the endpoint, captures supported activity from Claude
-Code, Codex CLI, Claude Cowork, and Cursor, and normalizes it into
+Code, Codex CLI, Factory Droid, Claude Cowork, and Cursor, and normalizes it into
 Wazuh-compatible JSONL for existing localfile/Wazuh or customer-managed
 pipelines. Splunk HEC forwarding is available as an optional collector
 destination for teams that want direct SIEM ingestion.
@@ -38,8 +38,9 @@ destination for teams that want direct SIEM ingestion.
 
 - **Local-only by default:** no hosted account, remote policy fetch, or external
   network dependency during normal endpoint collection.
-- **Built for AI runtimes:** captures supported Claude Code, Codex CLI, Cursor,
-  and Claude Cowork activity where those runtimes expose telemetry.
+- **Built for AI runtimes:** captures supported Claude Code, Codex CLI, Factory
+  Droid, Cursor, and Claude Cowork activity where those runtimes expose
+  telemetry.
 - **Security-team friendly:** ships macOS package assets for Jamf Pro and Fleet
   deployment, validation, repair, and inventory.
 - **SIEM-ready output:** writes Wazuh-compatible JSONL for local or
@@ -116,9 +117,9 @@ Read more in
 Beacon can currently:
 
 - **Runtime discovery:** discover supported local agent runtimes: Claude Code,
-  Codex CLI, Cursor, and Claude Cowork.
-- **Local OTLP setup:** configure Claude Code and Codex CLI to export
-  OpenTelemetry to a localhost collector.
+  Codex CLI, Factory Droid, Cursor, and Claude Cowork.
+- **Local OTLP setup:** configure Claude Code, Codex CLI, and Factory Droid to
+  export OpenTelemetry to a localhost collector.
 - **Cursor hooks:** install Cursor hooks that emit local endpoint events for
   sessions, prompt submission, tool use, command execution, MCP-like tool
   activity, approval decisions, and file edits where Cursor exposes those hook
@@ -215,9 +216,21 @@ beacon endpoint status
 ```
 
 The normal CLI flow uses per-user endpoint paths by default. Cursor hooks,
-Claude Code OTLP, and Codex OTLP all write to the same user runtime log:
-`~/.beacon/endpoint/logs/runtime.jsonl`. Use `--system` only for root-managed
-package or MDM deployments.
+Claude Code OTLP, Codex OTLP, and Factory Droid OTLP metrics can all write to
+the same user runtime log: `~/.beacon/endpoint/logs/runtime.jsonl`. Use
+`--system` only for root-managed package or MDM deployments.
+
+Factory Droid exports OTLP metrics over HTTP from its launch environment.
+For local testing, set the Factory OTEL endpoint before launching `droid`:
+
+```bash
+export OTEL_TELEMETRY_ENDPOINT="http://127.0.0.1:4318"
+droid exec "review this repository"
+```
+
+For enterprise rollout, manage that environment through MDM or another
+customer-owned launch policy. Beacon discovers Droid and validates the effective
+OTEL endpoint, but it does not mutate Droid shell profiles.
 
 Command details: [`beacon endpoint install`](https://docs.asymptotelabs.ai/cli/endpoint-install)
 and [`beacon endpoint status`](https://docs.asymptotelabs.ai/cli/endpoint-status).
@@ -364,7 +377,7 @@ beacon endpoint integrations claude-cowork validate --since 10m
 beacon endpoint uninstall --keep-logs
 ```
 
-- `beacon endpoint install`: configure the endpoint agent, Collector service, and Claude/Codex telemetry.
+- `beacon endpoint install`: configure the endpoint agent, Collector service, and Claude/Codex/Factory telemetry.
 - `beacon endpoint repair`: reapply service/config files and repair telemetry drift.
 - `beacon endpoint status`: show Collector, service, harness, and diagnostic status.
 - `beacon endpoint discover`: list supported local AI runtimes.
@@ -410,7 +423,7 @@ installs the CLI, collector, Wazuh content pack, and deployment scripts. The
 package should apply explicit system endpoint settings, for example:
 
 ```bash
-beacon endpoint install --system --harness claude,codex --content-retention full
+beacon endpoint install --system --harness claude,codex,factory --content-retention full
 ```
 
 See [MDM Deployment](https://docs.asymptotelabs.ai/cli/mdm-deployment) for the

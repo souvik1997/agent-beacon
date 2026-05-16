@@ -116,6 +116,19 @@ Cursor hook installation is separate from the base system package because Cursor
 configuration is per user. Run the Cursor hook helper only when an interactive
 console user is present.
 
+Factory Droid telemetry is also managed outside the base system package. Droid
+reads OTLP settings from its launch environment, so deploy the environment from
+a user-context MDM policy or another customer-owned launch policy:
+
+```sh
+export OTEL_TELEMETRY_ENDPOINT="http://127.0.0.1:4318"
+```
+
+Beacon's endpoint status and discovery commands can validate whether the
+effective Droid environment points at the local OTLP HTTP receiver. If
+`OTEL_TELEMETRY_HEADERS` is needed, treat it as customer-managed secret material
+and avoid storing it in Beacon defaults or package parameters.
+
 ## Jamf Pro
 
 Upload the generated `.pkg` to Jamf Pro and create a Policy scoped to a pilot
