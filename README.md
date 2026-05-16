@@ -25,7 +25,7 @@ often have little unified visibility into prompts, tools, approvals, commands,
 and file changes across local agent harnesses.
 
 Beacon runs locally on the endpoint, captures supported activity from Claude
-Code, Codex CLI, Claude Cowork, and Cursor, and normalizes it into
+Code, Codex CLI, Factory Droid, Claude Cowork, and Cursor, and normalizes it into
 Wazuh-compatible JSONL for existing localfile/Wazuh or customer-managed
 pipelines. Splunk HEC forwarding is available as an optional collector
 destination for teams that want direct SIEM ingestion.
@@ -38,8 +38,9 @@ destination for teams that want direct SIEM ingestion.
 
 - **Local-only by default:** no hosted account, remote policy fetch, or external
   network dependency during normal endpoint collection.
-- **Built for AI runtimes:** captures supported Claude Code, Codex CLI, Cursor,
-  and Claude Cowork activity where those runtimes expose telemetry.
+- **Built for AI runtimes:** captures supported Claude Code, Codex CLI, Factory
+  Droid, Cursor, and Claude Cowork activity where those runtimes expose
+  telemetry.
 - **Security-team friendly:** ships macOS package assets for Jamf Pro and Fleet
   deployment, validation, repair, and inventory.
 - **SIEM-ready output:** writes Wazuh-compatible JSONL for local or
@@ -116,13 +117,13 @@ Read more in
 Beacon can currently:
 
 - **Runtime discovery:** discover supported local agent runtimes: Claude Code,
-  Codex CLI, Cursor, and Claude Cowork.
-- **Local OTLP setup:** configure Claude Code and Codex CLI to export
-  OpenTelemetry to a localhost collector.
-- **Cursor hooks:** install Cursor hooks that emit local endpoint events for
+  Codex CLI, Factory Droid, Cursor, and Claude Cowork.
+- **Local OTLP setup:** configure Claude Code, Codex CLI, and Factory Droid to
+  export OpenTelemetry to a localhost collector.
+- **Cursor and Factory hooks:** install hooks that emit local endpoint events for
   sessions, prompt submission, tool use, command execution, MCP-like tool
-  activity, approval decisions, and file edits where Cursor exposes those hook
-  payloads.
+  activity, approval decisions, and file edits where each runtime exposes those
+  hook payloads.
 - **Collector export:** convert OTLP logs, traces, metrics, and resource
   attributes into Beacon endpoint JSONL with the `beaconjson` collector exporter,
   and optionally forward the same OTLP signals to Splunk HEC.
@@ -214,10 +215,23 @@ beacon endpoint install
 beacon endpoint status
 ```
 
-The normal CLI flow uses per-user endpoint paths by default. Cursor hooks,
-Claude Code OTLP, and Codex OTLP all write to the same user runtime log:
-`~/.beacon/endpoint/logs/runtime.jsonl`. Use `--system` only for root-managed
-package or MDM deployments.
+The normal CLI flow uses per-user endpoint paths by default. Claude Code and
+Codex export OTLP to the local collector, and Cursor/Factory hooks write direct
+JSONL events. When installed from the same endpoint config, they all write to the
+same user runtime log: `~/.beacon/endpoint/logs/runtime.jsonl`. Use `--system`
+only for root-managed package or MDM deployments.
+
+Factory Droid OTLP metrics are managed through Droid's launch environment. For
+local testing, set the Factory OTEL endpoint before launching `droid`:
+
+```bash
+export OTEL_TELEMETRY_ENDPOINT="http://127.0.0.1:4318"
+droid exec "review this repository"
+```
+
+For enterprise rollout, manage that environment through MDM or another
+customer-owned launch policy. Beacon discovers Droid and validates the effective
+OTEL endpoint, but it does not mutate Droid shell profiles.
 
 Command details: [`beacon endpoint install`](https://docs.asymptotelabs.ai/cli/endpoint-install)
 and [`beacon endpoint status`](https://docs.asymptotelabs.ai/cli/endpoint-status).
@@ -262,14 +276,24 @@ sh packaging/macos/smoke-endpoint.sh
 
 ## Optional Integrations
 
-### Cursor Hooks
+### Cursor And Factory Hooks
 
 ```bash
 beacon endpoint hooks install --harness cursor
+beacon endpoint hooks install --harness factory
 ```
 
-See [Cursor Hooks](https://docs.asymptotelabs.ai/cli/hooks) for install, status,
-and uninstall guidance.
+Cursor and Factory hooks are opt-in user/project integrations for richer local
+telemetry than OTLP metrics alone. Cursor hooks are configured through
+`.cursor/hooks.json` and Factory hooks are configured through
+`.factory/settings.json`. Both commands embed the configured endpoint log path
+and content-retention config in the hook command, so install or repair the
+endpoint config first when you want all runtime telemetry in the same dashboard
+log. Restart Cursor/Droid after installing hooks so new sessions pick up the
+settings. Factory hooks include `UserPromptSubmit` for prompt telemetry plus
+session, tool/file, stop, and session-end events. See
+[Cursor Hooks](https://docs.asymptotelabs.ai/cli/hooks) for install, status, and
+uninstall guidance.
 
 ### Claude Cowork
 
@@ -369,7 +393,7 @@ beacon endpoint uninstall --keep-logs
 - `beacon endpoint status`: show Collector, service, harness, and diagnostic status.
 - `beacon endpoint discover`: list supported local AI runtimes.
 - `beacon endpoint dashboard`: run a localhost-only dashboard over the runtime JSONL log.
-- `beacon endpoint hooks`: install, check, or remove hook-based integrations such as Cursor.
+- `beacon endpoint hooks`: install, check, or remove hook-based integrations such as Cursor and Factory.
 - `beacon endpoint integrations claude-cowork`: set up and validate admin-configured Cowork OTLP export.
 - `beacon endpoint wazuh`: print/install Wazuh content and write a validation event.
 - `beacon endpoint uninstall`: stop services and remove managed endpoint files.
@@ -410,7 +434,7 @@ installs the CLI, collector, Wazuh content pack, and deployment scripts. The
 package should apply explicit system endpoint settings, for example:
 
 ```bash
-beacon endpoint install --system --harness claude,codex --content-retention full
+beacon endpoint install --system --harness claude,codex,factory --content-retention full
 ```
 
 See [MDM Deployment](https://docs.asymptotelabs.ai/cli/mdm-deployment) for the
