@@ -12,7 +12,7 @@ Run on macOS with:
 - Docker Desktop or Docker Compose available for local Elastic validation.
 - A dedicated test macOS user or a workstation where changing local AI runtime config is acceptable.
 - Authenticated/installable runtimes for the full matrix: Cursor, Claude Code, Codex CLI, and OpenCode.
-- Repo checkout available at `/Users/shukan/Workspace/agent-beacon` for writing notes and later researching fixes.
+- Repo checkout available locally. Set `BEACON_REPO` to that checkout path for writing notes and later researching fixes.
 - Integration validation is user-assisted for now. The agent prepares Beacon, asks the user to submit unique prompts in each runtime, then self-verifies the resulting events in `runtime.jsonl` and Elastic. Headless/noninteractive runtime commands can be used as an optional fast path only when local auth and CLI behavior are known to be reliable.
 
 Before running commands, record environment evidence:
@@ -40,6 +40,7 @@ Create a timestamped test directory and preserve all user-owned config files Bea
 
 ```bash
 export BEACON_E2E_RUN="${HOME}/beacon-e2e-$(date +%Y%m%d-%H%M%S)"
+export BEACON_REPO="${BEACON_REPO:-$(pwd)}"
 mkdir -p "$BEACON_E2E_RUN/backups"
 
 for path in \
