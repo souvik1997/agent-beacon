@@ -66,10 +66,20 @@ that may need review.
 ./beacon endpoint hooks install --harness cursor
 ./beacon endpoint hooks status --harness cursor
 
+./beacon endpoint hooks install --harness opencode
+./beacon endpoint hooks status --harness opencode
+
 ./beacon endpoint integrations claude-cowork setup --endpoint https://collector.example.com --open
 ./beacon endpoint integrations claude-cowork setup --ngrok --open
 ./beacon endpoint integrations claude-cowork validate --since 10m
 ```
+
+The opencode integration installs Beacon's owned local plugin at
+`~/.config/opencode/plugins/beacon.ts`. The plugin is a thin adapter that sends
+raw opencode hook payloads to Beacon's Go hook binary; Beacon handles
+normalization, retention, redaction, and JSONL output locally. For local
+troubleshooting, set `BEACON_OPENCODE_DEBUG=1` in the environment that launches
+opencode to emit best-effort plugin debug logs.
 
 Claude Cowork monitoring is configured in the Claude admin console at
 `https://claude.ai/admin-settings/cowork`. The OTLP endpoint must be reachable

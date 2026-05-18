@@ -51,6 +51,8 @@ func resolveSessionID(input map[string]interface{}, platform string) string {
 		return getFirstStr(input, "sessionId", "session_id")
 	case "cursor":
 		return getFirstStr(input, "conversation_id")
+	case "opencode":
+		return getFirstStr(input, "session_id", "sessionID")
 	default:
 		id, _ := input["session_id"].(string)
 		return id
@@ -71,6 +73,9 @@ func resolveSessionIDWithTranscript(input map[string]interface{}, platform strin
 	case "cursor":
 		sessionID = getFirstStr(input, "conversation_id")
 		transcriptPath = getFirstStr(input, "transcript_path")
+		return
+	case "opencode":
+		sessionID = getFirstStr(input, "session_id", "sessionID")
 		return
 	default:
 		sessionID, _ = input["session_id"].(string)
@@ -106,6 +111,11 @@ func resolveCwd(input map[string]interface{}, platform string) string {
 			return cwd
 		}
 		return ""
+	}
+	if platform == "opencode" {
+		if cwd := getFirstStr(input, "cwd", "directory", "worktree"); cwd != "" {
+			return cwd
+		}
 	}
 	cwd, _ := input["cwd"].(string)
 	return cwd

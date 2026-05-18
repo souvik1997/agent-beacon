@@ -9,11 +9,12 @@ import (
 
 // Directories
 var (
-	BeaconDir  = getBeaconDir()
-	ClaudeDir  = filepath.Join(BeaconDir, "claude")
-	CopilotDir = filepath.Join(BeaconDir, "copilot")
-	CursorDir  = filepath.Join(BeaconDir, "cursor")
-	FactoryDir = filepath.Join(BeaconDir, "factory")
+	BeaconDir   = getBeaconDir()
+	ClaudeDir   = filepath.Join(BeaconDir, "claude")
+	CopilotDir  = filepath.Join(BeaconDir, "copilot")
+	CursorDir   = filepath.Join(BeaconDir, "cursor")
+	FactoryDir  = filepath.Join(BeaconDir, "factory")
+	OpenCodeDir = filepath.Join(BeaconDir, "opencode")
 )
 
 // Log rotation
@@ -89,6 +90,8 @@ func GetStateDir(platform string) string {
 		return CursorDir
 	case "factory":
 		return FactoryDir
+	case "opencode":
+		return OpenCodeDir
 	default:
 		return ClaudeDir
 	}

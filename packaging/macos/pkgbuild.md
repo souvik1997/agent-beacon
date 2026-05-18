@@ -76,6 +76,20 @@ The package installs files under `/opt/beacon` and runs
 collector and retention settings. The default packaged content retention is
 `full`, matching the shared MDM install wrapper.
 
+opencode support is intentionally not part of the default package install. To
+enable opencode prompt/session/tool telemetry, run Beacon's hook installer in the
+target user's context:
+
+```bash
+beacon endpoint hooks install --harness opencode --level user --log-path /var/log/beacon-agent/runtime.jsonl
+```
+
+This writes Beacon's owned plugin to `~/.config/opencode/plugins/beacon.ts`. The
+plugin is only an opencode adapter; Beacon's Go hook binary handles event
+normalization, retention, redaction, and JSONL output. Set
+`BEACON_OPENCODE_DEBUG=1` in the opencode launch environment only when
+troubleshooting plugin delivery.
+
 ## Jamf Deployment
 
 Upload the generated `.pkg` to Jamf Pro and create a Policy scoped to a pilot

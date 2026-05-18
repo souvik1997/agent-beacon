@@ -371,6 +371,8 @@ func configureHarnesses(cfg endpointconfig.Config) ([]string, error) {
 				return paths, err
 			}
 			paths = append(paths, path)
+		case "opencode":
+			return paths, fmt.Errorf("opencode telemetry is installed with `beacon endpoint hooks install --harness opencode`, not endpoint install")
 		case "factory", "droid":
 			return paths, fmt.Errorf("Factory Droid telemetry is MDM-managed; set OTEL_TELEMETRY_ENDPOINT=http://127.0.0.1:%d in the Droid launch environment instead of using --harness %s", cfg.Collector.HTTPPort, name)
 		case "":
