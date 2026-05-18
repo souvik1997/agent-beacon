@@ -1,0 +1,16 @@
+{
+  "index_patterns": ["logs-beacon.endpoint-*"],
+  "data_stream": {},
+  "priority": 200,
+  "composed_of": ["beacon-endpoint-mappings", "beacon-endpoint-settings"],
+  "template": {
+    "settings": {
+      "index.default_pipeline": "beacon-endpoint",
+      "index.lifecycle.name": "beacon-endpoint"
+    }
+  },
+  "_meta": {
+    "beacon_schema_version": "1.0",
+    "ecs_version": "8.11.0"
+  }
+}

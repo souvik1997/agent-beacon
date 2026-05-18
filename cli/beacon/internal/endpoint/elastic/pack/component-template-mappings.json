@@ -1,0 +1,248 @@
+{
+  "template": {
+    "mappings": {
+      "dynamic": true,
+      "dynamic_templates": [
+        {
+          "beacon_keywords": {
+            "path_match": "beacon.*",
+            "match_mapping_type": "string",
+            "mapping": {
+              "type": "keyword",
+              "ignore_above": 1024,
+              "fields": {
+                "text": {
+                  "type": "match_only_text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "otel_keywords": {
+            "path_match": "beacon.otel.attributes.*",
+            "match_mapping_type": "string",
+            "mapping": {
+              "type": "keyword",
+              "ignore_above": 1024,
+              "fields": {
+                "text": {
+                  "type": "match_only_text"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "message": { "type": "match_only_text" },
+        "agent": {
+          "properties": {
+            "name": { "type": "keyword" },
+            "type": { "type": "keyword" },
+            "version": { "type": "keyword" }
+          }
+        },
+        "beacon": {
+          "properties": {
+            "vendor": { "type": "keyword" },
+            "product": { "type": "keyword" },
+            "schema_version": { "type": "keyword" },
+            "severity": { "type": "keyword" },
+            "truncated": { "type": "boolean" },
+            "harness": {
+              "properties": {
+                "name": { "type": "keyword" },
+                "version": { "type": "keyword" },
+                "executable_path": { "type": "keyword" },
+                "config_path": { "type": "keyword" }
+              }
+            },
+            "session": {
+              "properties": {
+                "id": { "type": "keyword" }
+              }
+            },
+            "tool": {
+              "properties": {
+                "name": { "type": "keyword" }
+              }
+            },
+            "file": {
+              "properties": {
+                "operation": { "type": "keyword" },
+                "language": { "type": "keyword" }
+              }
+            },
+            "mcp": {
+              "properties": {
+                "server": { "type": "keyword" },
+                "tool": { "type": "keyword" }
+              }
+            },
+            "approval": {
+              "properties": {
+                "required": { "type": "boolean" },
+                "decision": { "type": "keyword" },
+                "reason": { "type": "match_only_text" }
+              }
+            },
+            "policy": {
+              "properties": {
+                "id": { "type": "keyword" },
+                "name": { "type": "keyword" },
+                "decision": { "type": "keyword" },
+                "enforcement": { "type": "keyword" },
+                "reason": { "type": "match_only_text" }
+              }
+            },
+            "prompt": {
+              "properties": {
+                "text": { "type": "match_only_text" }
+              }
+            },
+            "content": {
+              "properties": {
+                "retention": { "type": "keyword" },
+                "included": { "type": "boolean" },
+                "redacted": { "type": "boolean" },
+                "truncated": { "type": "boolean" }
+              }
+            },
+            "destination": {
+              "properties": {
+                "type": { "type": "keyword" },
+                "mode": { "type": "keyword" },
+                "status": { "type": "keyword" }
+              }
+            },
+            "health": {
+              "properties": {
+                "component": { "type": "keyword" },
+                "status": { "type": "keyword" },
+                "reason": { "type": "match_only_text" }
+              }
+            },
+            "metric": {
+              "properties": {
+                "name": { "type": "keyword" }
+              }
+            },
+            "otel": {
+              "properties": {
+                "signal": { "type": "keyword" },
+                "metric_description": { "type": "match_only_text" },
+                "metric_unit": { "type": "keyword" },
+                "attribute_count": { "type": "long" },
+                "attributes": {
+                  "type": "object",
+                  "dynamic": true
+                }
+              }
+            }
+          }
+        },
+        "data_stream": {
+          "properties": {
+            "type": { "type": "constant_keyword", "value": "logs" },
+            "dataset": { "type": "constant_keyword", "value": "beacon.endpoint" },
+            "namespace": { "type": "keyword" }
+          }
+        },
+        "event": {
+          "properties": {
+            "kind": { "type": "keyword" },
+            "action": { "type": "keyword" },
+            "category": { "type": "keyword" },
+            "dataset": { "type": "constant_keyword", "value": "beacon.endpoint" },
+            "duration": { "type": "long" },
+            "outcome": { "type": "keyword" },
+            "severity": { "type": "short" }
+          }
+        },
+        "host": {
+          "properties": {
+            "hostname": { "type": "keyword" },
+            "name": { "type": "keyword" },
+            "os": {
+              "properties": {
+                "family": { "type": "keyword" },
+                "type": { "type": "keyword" }
+              }
+            }
+          }
+        },
+        "user": {
+          "properties": {
+            "name": { "type": "keyword" },
+            "id": { "type": "keyword" }
+          }
+        },
+        "service": {
+          "properties": {
+            "name": { "type": "keyword" }
+          }
+        },
+        "trace": {
+          "properties": {
+            "id": { "type": "keyword" }
+          }
+        },
+        "process": {
+          "properties": {
+            "working_directory": { "type": "keyword" },
+            "command_line": { "type": "wildcard" },
+            "executable": { "type": "keyword" },
+            "exit_code": { "type": "long" }
+          }
+        },
+        "file": {
+          "properties": {
+            "path": { "type": "keyword" },
+            "directory": { "type": "keyword" },
+            "name": { "type": "keyword" },
+            "extension": { "type": "keyword" },
+            "size": { "type": "long" },
+            "hash": {
+              "properties": {
+                "sha256": { "type": "keyword" }
+              }
+            }
+          }
+        },
+        "gen_ai": {
+          "properties": {
+            "request": {
+              "properties": {
+                "model": { "type": "keyword" }
+              }
+            }
+          }
+        },
+        "vcs": {
+          "properties": {
+            "repository": {
+              "properties": {
+                "url": { "type": "keyword" }
+              }
+            },
+            "ref": {
+              "properties": {
+                "head": {
+                  "properties": {
+                    "name": { "type": "keyword" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "_meta": {
+    "description": "Beacon endpoint ECS and beacon namespace mappings",
+    "ecs_version": "8.11.0"
+  }
+}

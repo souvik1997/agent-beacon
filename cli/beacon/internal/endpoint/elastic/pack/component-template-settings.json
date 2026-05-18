@@ -1,0 +1,13 @@
+{
+  "template": {
+    "settings": {
+      "index.refresh_interval": "5s",
+      "index.number_of_shards": 1,
+      "index.number_of_replicas": 0,
+      "index.lifecycle.name": "beacon-endpoint"
+    }
+  },
+  "_meta": {
+    "description": "Beacon endpoint data stream settings"
+  }
+}

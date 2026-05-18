@@ -1,0 +1,27 @@
+outputs:
+  default:
+    type: elasticsearch
+    hosts: ["${ES_HOSTS:http://localhost:9200}"]
+    ssl.verification_mode: "${ES_SSL_VERIFY:full}"
+    # For hosted or secured clusters, configure one auth method:
+    # api_key: "${ES_API_KEY}"
+    # username: "${ES_USERNAME}"
+    # password: "${ES_PASSWORD}"
+
+inputs:
+  - id: beacon-endpoint
+    type: filestream
+    use_output: default
+    streams:
+      - id: beacon-endpoint-jsonl
+        data_stream:
+          type: logs
+          dataset: beacon.endpoint
+          namespace: default
+        paths:
+          - "{{LOG_PATH}}"
+        parsers:
+          - ndjson:
+              keys_under_root: true
+              add_error_key: true
+              overwrite_keys: true
