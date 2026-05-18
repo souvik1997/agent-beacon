@@ -47,6 +47,7 @@ func DiscoverAll() []Harness {
 	return []Harness{
 		DiscoverClaude(),
 		DiscoverCodex(),
+		DiscoverOpenCode(),
 		DiscoverFactory(),
 		DiscoverCursor(),
 		DiscoverClaudeCowork(),
@@ -123,6 +124,36 @@ func DiscoverFactory() Harness {
 	} else {
 		h.TelemetryStatus = TelemetryMissing
 		h.Message = "Factory Droid telemetry is configured by the launch environment; set OTEL_TELEMETRY_ENDPOINT to the local OTLP HTTP receiver"
+	}
+	return h
+}
+
+func DiscoverOpenCode() Harness {
+	h := Harness{Name: "opencode", DisplayName: "opencode", Capability: "plugin"}
+	path, err := exec.LookPath("opencode")
+	if err == nil {
+		h.Detected = true
+		h.ExecutablePath = path
+		h.Version = commandVersion(path)
+	}
+	home, _ := os.UserHomeDir()
+	pluginPath := filepath.Join(home, ".config", "opencode", "plugins", "beacon.ts")
+	h.ConfigPath = pluginPath
+	if !h.Detected && dirExists(filepath.Join(home, ".config", "opencode")) {
+		h.Detected = true
+	}
+	if fileExists(pluginPath) {
+		data, _ := os.ReadFile(pluginPath)
+		if strings.Contains(string(data), "beacon-managed-opencode-plugin:v1") {
+			h.TelemetryStatus = TelemetryEnabled
+			h.Message = "Beacon opencode plugin is configured"
+		} else {
+			h.TelemetryStatus = TelemetryDisabled
+			h.Message = "opencode plugin file exists but Beacon endpoint plugin was not found"
+		}
+	} else {
+		h.TelemetryStatus = TelemetryMissing
+		h.Message = "Beacon opencode plugin was not found"
 	}
 	return h
 }

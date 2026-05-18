@@ -187,18 +187,21 @@ func setupHookConfigDirs(t *testing.T) {
 	origCopilotDir := hookconfig.CopilotDir
 	origCursorDir := hookconfig.CursorDir
 	origFactoryDir := hookconfig.FactoryDir
+	origOpenCodeDir := hookconfig.OpenCodeDir
 	origPlatform := platformFlag
 	hookconfig.BeaconDir = tmp
 	hookconfig.ClaudeDir = filepath.Join(tmp, "claude")
 	hookconfig.CopilotDir = filepath.Join(tmp, "copilot")
 	hookconfig.CursorDir = filepath.Join(tmp, "cursor")
 	hookconfig.FactoryDir = filepath.Join(tmp, "factory")
+	hookconfig.OpenCodeDir = filepath.Join(tmp, "opencode")
 	t.Cleanup(func() {
 		hookconfig.BeaconDir = origBeaconDir
 		hookconfig.ClaudeDir = origClaudeDir
 		hookconfig.CopilotDir = origCopilotDir
 		hookconfig.CursorDir = origCursorDir
 		hookconfig.FactoryDir = origFactoryDir
+		hookconfig.OpenCodeDir = origOpenCodeDir
 		platformFlag = origPlatform
 	})
 }

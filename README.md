@@ -34,7 +34,7 @@ Beacon is Asymptote's open-source endpoint agent for security and IT teams that
 need visibility into local AI agent activity.
 
 It runs locally, captures supported activity from local agent harnesses like
-Claude Code, Codex CLI, Factory Droid, Claude Cowork, and Cursor, then
+Claude Code, Codex CLI, opencode, Factory Droid, Claude Cowork, and Cursor, then
 normalizes that activity into endpoint events your team can inspect and retain
 locally.
 

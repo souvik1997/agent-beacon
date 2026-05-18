@@ -348,6 +348,16 @@ func runEndpointHooksInstall(cmd *cobra.Command, args []string) error {
 				return err
 			}
 			fmt.Printf("Factory hooks installed: %s\n", status.SettingsPath)
+		case "opencode":
+			status, err := endpointhooks.InstallOpenCode(endpointhooks.OpenCodeOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+			if err != nil {
+				return err
+			}
+			fmt.Printf("opencode plugin installed: %s\n", status.PluginPath)
 		case "":
 		default:
 			return fmt.Errorf("unsupported hook harness %q", name)
@@ -372,6 +382,16 @@ func runEndpointHooksUninstall(cmd *cobra.Command, args []string) error {
 			fmt.Println(status.Message)
 		case "factory", "droid":
 			status, err := endpointhooks.UninstallFactory(endpointhooks.FactoryOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+			if err != nil {
+				return err
+			}
+			fmt.Println(status.Message)
+		case "opencode":
+			status, err := endpointhooks.UninstallOpenCode(endpointhooks.OpenCodeOptions{
 				Level:    endpointhooks.Level(endpointOpts.hookLevel),
 				LogPath:  cfg.LogPath,
 				UserMode: cfg.UserMode,
@@ -405,6 +425,12 @@ func runEndpointHooksStatus(cmd *cobra.Command, args []string) error {
 				LogPath:  cfg.LogPath,
 				UserMode: cfg.UserMode,
 			})
+		case "opencode":
+			statuses["opencode"] = endpointhooks.OpenCodeHookStatus(endpointhooks.OpenCodeOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
 		case "":
 		default:
 			return fmt.Errorf("unsupported hook harness %q", name)
@@ -422,6 +448,10 @@ func runEndpointHooksStatus(cmd *cobra.Command, args []string) error {
 		case "factory", "droid":
 			status := statuses["factory"].(endpointhooks.FactoryStatus)
 			fmt.Printf("Factory hooks: installed=%t path=%s\n", status.Installed, status.SettingsPath)
+			fmt.Println(status.Message)
+		case "opencode":
+			status := statuses["opencode"].(endpointhooks.OpenCodeStatus)
+			fmt.Printf("opencode plugin: installed=%t path=%s\n", status.Installed, status.PluginPath)
 			fmt.Println(status.Message)
 		}
 	}

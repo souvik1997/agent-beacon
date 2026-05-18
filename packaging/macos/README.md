@@ -112,13 +112,14 @@ Recommended rollout:
 4. Scope repair/remediation to unhealthy devices.
 5. Broaden deployment in stages after inventory and validation stay healthy.
 
-Cursor and Factory hook installation is separate from the base system package
-because both integrations write per-user or per-project runtime settings. Run
-hook helpers only when an interactive console user is present. Cursor hooks use
-`.cursor/hooks.json`; Factory hooks use `.factory/settings.json`; restart the
-runtime after installation so new sessions pick up the settings. Install hooks
-with the same endpoint log path as the collector when you want hook telemetry and
-OTLP telemetry to appear in one dashboard.
+Cursor, Factory, and opencode hook installation is separate from the base system
+package because these integrations write per-user or per-project runtime
+settings. Run hook helpers only when an interactive console user is present.
+Cursor hooks use `.cursor/hooks.json`; Factory hooks use `.factory/settings.json`;
+opencode uses Beacon's owned plugin at `~/.config/opencode/plugins/beacon.ts`.
+Restart the runtime after installation so new sessions pick up the settings.
+Install hooks with the same endpoint log path as the collector when you want hook
+telemetry and OTLP telemetry to appear in one dashboard.
 
 Factory Droid OTLP metrics are also managed outside the base system package.
 Droid reads OTLP settings from its launch environment, so deploy the environment
@@ -139,6 +140,19 @@ hooks in the logged-in user's context:
 ```bash
 beacon endpoint hooks install --harness factory --level user --log-path /var/log/beacon-agent/runtime.jsonl
 ```
+
+For opencode prompt/session/tool telemetry, install Beacon's opencode plugin in
+the logged-in user's context:
+
+```bash
+beacon endpoint hooks install --harness opencode --level user --log-path /var/log/beacon-agent/runtime.jsonl
+```
+
+The opencode plugin is a small Beacon-owned TypeScript adapter that calls the
+Beacon Go hook binary with raw opencode payloads. It does not depend on the
+third-party `@devtheops/opencode-plugin-otel` package or configure a separate
+OTLP exporter. For troubleshooting, set `BEACON_OPENCODE_DEBUG=1` in the
+environment that launches opencode to enable best-effort plugin debug logs.
 
 ## Jamf Pro
 
@@ -177,8 +191,8 @@ tokens do not need to be entered as visible script parameters.
 Use `/opt/beacon/jamf/scripts/repair.sh` as a remediation policy for Macs where
 Extension Attributes report a stale or unhealthy install. Use
 `/opt/beacon/jamf/scripts/install-cursor-hooks.sh` as a separate user-context
-policy for hook telemetry. Set `BEACON_HOOK_HARNESSES=cursor,factory` to install
-both supported hook integrations; the helper writes hook events to
+policy for hook telemetry. Set `BEACON_HOOK_HARNESSES=cursor,factory,opencode`
+to install supported hook integrations; the helper writes hook events to
 `/var/log/beacon-agent/runtime.jsonl` by default.
 
 ### Jamf Extension Attributes
@@ -303,7 +317,7 @@ removal remains under the MDM/package receipt lifecycle.
   writable by the collector.
 - No recent runtime events: confirm supported harnesses are configured and the
   local OTLP ports are not in use by another process.
-- Cursor or Factory hooks are missing: run the hook helper while a non-root
-  console user is logged in, and confirm the helper uses the same runtime log
-  path as the endpoint collector.
+- Cursor, Factory, or opencode hooks are missing: run the hook helper while a
+  non-root console user is logged in, and confirm the helper uses the same
+  runtime log path as the endpoint collector.
 

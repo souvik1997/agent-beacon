@@ -1,0 +1,14 @@
+{
+  "type": "chat.message",
+  "session_id": "fixture-session",
+  "directory": "/tmp/project",
+  "model": "provider/model",
+  "output": {
+    "parts": [
+      {
+        "type": "text",
+        "text": "sanitized prompt text"
+      }
+    ]
+  }
+}

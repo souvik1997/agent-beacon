@@ -148,6 +148,14 @@ func TestConfigureHarnessesRejectsFactoryAsMDMManaged(t *testing.T) {
 	}
 }
 
+func TestConfigureHarnessesRejectsOpenCodeAsHookManaged(t *testing.T) {
+	cfg := endpointconfig.Config{Harnesses: []string{"opencode"}}
+	_, err := configureHarnesses(cfg)
+	if err == nil || !strings.Contains(err.Error(), "endpoint hooks install --harness opencode") {
+		t.Fatalf("configureHarnesses error = %v, want opencode hook-managed error", err)
+	}
+}
+
 func TestWriteReadManifestRoundTrip(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)

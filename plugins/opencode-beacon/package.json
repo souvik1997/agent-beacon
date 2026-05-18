@@ -1,0 +1,19 @@
+{
+  "name": "@asymptote-labs/opencode-beacon",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Beacon endpoint telemetry adapter for opencode",
+  "type": "module",
+  "scripts": {
+    "check": "bun --check src/beacon.ts"
+  },
+  "exports": {
+    ".": "./src/beacon.ts"
+  },
+  "files": [
+    "src/"
+  ],
+  "peerDependencies": {
+    "@opencode-ai/plugin": "*"
+  }
+}
