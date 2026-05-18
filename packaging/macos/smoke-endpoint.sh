@@ -74,6 +74,9 @@ run_beacon endpoint status --user --log-path "$LOG_PATH" >/dev/null
 echo "Writing Wazuh validation event..."
 run_beacon endpoint wazuh validate --user --log-path "$LOG_PATH" >/dev/null
 
+echo "Checking Elastic Filebeat config generation..."
+run_beacon endpoint elastic print-config --user --log-path "$LOG_PATH" >/dev/null
+
 if ! grep -q '"action":"telemetry.enabled"' "$LOG_PATH"; then
   echo "expected telemetry.enabled event in runtime log" >&2
   exit 1

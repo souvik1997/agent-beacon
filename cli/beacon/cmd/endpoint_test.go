@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -47,6 +49,72 @@ func TestEndpointCoworkSetupCommandRegistered(t *testing.T) {
 		if cmd.Flags().Lookup(name) == nil {
 			t.Fatalf("cowork setup command missing --%s flag", name)
 		}
+	}
+}
+
+func TestEndpointElasticCommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"elastic", "print-config"},
+		{"elastic", "install-pack"},
+		{"elastic", "up"},
+		{"elastic", "down"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("Find %v returned error: %v", path, err)
+		}
+		if cmd == nil || cmd.Use != path[len(path)-1] {
+			t.Fatalf("elastic command %v not registered: %#v", path, cmd)
+		}
+	}
+	if endpointElasticInstallPackCmd.Flags().Lookup("output") == nil {
+		t.Fatal("elastic install-pack command missing --output flag")
+	}
+	if endpointElasticUpCmd.Flags().Lookup("pack-dir") == nil {
+		t.Fatal("elastic up command missing --pack-dir flag")
+	}
+	if endpointElasticDownCmd.Flags().Lookup("pack-dir") == nil {
+		t.Fatal("elastic down command missing --pack-dir flag")
+	}
+}
+
+func TestEnsureElasticPackDoesNotOverwriteExistingPack(t *testing.T) {
+	dir := t.TempDir()
+	composePath := filepath.Join(dir, "docker-compose.yml")
+	if err := os.WriteFile(composePath, []byte("custom compose"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureElasticPack(dir, "/tmp/beacon/runtime.jsonl"); err != nil {
+		t.Fatalf("ensureElasticPack returned error: %v", err)
+	}
+	got, err := os.ReadFile(composePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "custom compose" {
+		t.Fatalf("ensureElasticPack overwrote existing pack: %s", got)
+	}
+}
+
+func TestRunEndpointElasticDownIgnoresMissingPack(t *testing.T) {
+	oldPackDir := endpointOpts.elasticPackDir
+	endpointOpts.elasticPackDir = filepath.Join(t.TempDir(), "missing-pack")
+	t.Cleanup(func() {
+		endpointOpts.elasticPackDir = oldPackDir
+	})
+	if err := runEndpointElasticDown(t.Context()); err != nil {
+		t.Fatalf("runEndpointElasticDown returned error for missing pack: %v", err)
+	}
+}
+
+func TestEnvDefault(t *testing.T) {
+	t.Setenv("BEACON_TEST_VALUE", "")
+	if got := envDefault("BEACON_TEST_VALUE", "fallback"); got != "fallback" {
+		t.Fatalf("envDefault empty = %q", got)
+	}
+	t.Setenv("BEACON_TEST_VALUE", "  12345  ")
+	if got := envDefault("BEACON_TEST_VALUE", "fallback"); got != "12345" {
+		t.Fatalf("envDefault value = %q", got)
 	}
 }
 

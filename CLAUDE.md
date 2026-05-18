@@ -19,7 +19,7 @@ Do not recreate or depend on removed `asymptote` mirror trees. Keep new work foc
 - Preserve the local-only product posture. The public Beacon build should not require a hosted account, remote policy fetch, hosted dashboard, or external network dependency during normal hook execution.
 - Do not add dependency vulnerability scanning, OSV/GHSA lookups, package remediation, or other vulnerability-enforcement flows to the public hook path.
 - Do not add broad runtime enforcement unless explicitly requested. Current control behavior is limited to hook-native approvals/denials exposed by supported agent runtimes.
-- Keep direct destination support scoped to local JSONL/Wazuh unless explicitly requested. Other SIEM/observability systems should consume the local output through customer-managed forwarding.
+- Keep direct destination support scoped to local JSONL/Wazuh unless explicitly requested. Elastic support is a file-tailing pack over local JSONL; Beacon itself must not store Elastic credentials or require a hosted Elastic dependency.
 - Default content retention is `full`: configured prompt text, command output, raw tool inputs, raw OTLP attributes, and raw diffs may be written to local or customer-controlled logs, still subject to local redaction and size limits where supported. Keep `metadata` and `redacted` modes available for stricter deployments.
 
 ## Telemetry Scope
@@ -30,12 +30,13 @@ Supported runtime surfaces today:
 - Cursor hook telemetry for sessions, prompt submission, tool use, command execution, MCP-like tool activity, approval decisions, and file edits where hook payloads expose those fields.
 - Claude Cowork admin-configured OpenTelemetry setup guidance and local validation.
 - `beaconjson` OpenTelemetry Collector exporter that converts OTLP logs, traces, metrics, and resource attributes into Beacon endpoint JSONL.
+- Elasticsearch/Filebeat content pack generation for forwarding local Beacon JSONL into customer-managed Elastic deployments or the bundled loopback-only development stack.
 - A local-only dashboard served by `beacon endpoint dashboard`, bound to loopback by default and backed by the runtime JSONL log.
 
 Current non-goals unless explicitly requested:
 
 - Kernel/process monitoring, EDR replacement, shell history scraping, cloud audit ingestion, browser/SaaS telemetry, credential-use attribution, and MCP configuration inventory.
-- Direct hosted integrations for Datadog, Splunk, Elastic, Snowflake, Chronicle, Panther, or other SIEM destinations.
+- Direct hosted integrations for Datadog, Snowflake, Chronicle, Panther, or other SIEM destinations beyond explicitly supported local/customer-managed forwarding patterns.
 - Dependency vulnerability scanning or package security remediation.
 
 ## Common Commands

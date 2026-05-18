@@ -1,15 +1,20 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	endpointconfig "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/dashboard"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/elastic"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/harness"
 	endpointhooks "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/integrations/cowork"
@@ -41,6 +46,7 @@ var endpointOpts struct {
 	coworkNgrok              bool
 	coworkOpen               bool
 	coworkSince              string
+	elasticPackDir           string
 	hookLevel                string
 	contentRetention         string
 	splunkHECEndpoint        string
@@ -106,6 +112,11 @@ var endpointDashboardCmd = &cobra.Command{
 var endpointWazuhCmd = &cobra.Command{
 	Use:   "wazuh",
 	Short: "Manage Wazuh integration content",
+}
+
+var endpointElasticCmd = &cobra.Command{
+	Use:   "elastic",
+	Short: "Manage Elasticsearch integration content",
 }
 
 var endpointIntegrationsCmd = &cobra.Command{
@@ -230,6 +241,40 @@ var endpointWazuhValidateCmd = &cobra.Command{
 	RunE:         runEndpointWazuhValidate,
 }
 
+var endpointElasticPrintConfigCmd = &cobra.Command{
+	Use:   "print-config",
+	Short: "Print a Filebeat input for Beacon endpoint events",
+	Run: func(cmd *cobra.Command, args []string) {
+		cfg := loadOrDefaultConfig()
+		fmt.Print(elastic.InputSnippet(cfg.LogPath))
+	},
+}
+
+var endpointElasticInstallPackCmd = &cobra.Command{
+	Use:          "install-pack",
+	Short:        "Write Elasticsearch templates, pipeline, and Filebeat content to a directory",
+	SilenceUsage: true,
+	RunE:         runEndpointElasticInstallPack,
+}
+
+var endpointElasticUpCmd = &cobra.Command{
+	Use:          "up",
+	Short:        "Start a local Elasticsearch, Kibana, and Filebeat stack",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runEndpointElasticUp(cmd.Context())
+	},
+}
+
+var endpointElasticDownCmd = &cobra.Command{
+	Use:          "down",
+	Short:        "Stop the local Elasticsearch stack",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runEndpointElasticDown(cmd.Context())
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(endpointCmd)
 
@@ -240,11 +285,16 @@ func init() {
 	endpointCmd.AddCommand(endpointRepairCmd)
 	endpointCmd.AddCommand(endpointDashboardCmd)
 	endpointCmd.AddCommand(endpointWazuhCmd)
+	endpointCmd.AddCommand(endpointElasticCmd)
 	endpointCmd.AddCommand(endpointIntegrationsCmd)
 	endpointCmd.AddCommand(endpointHooksCmd)
 	endpointWazuhCmd.AddCommand(endpointWazuhPrintConfigCmd)
 	endpointWazuhCmd.AddCommand(endpointWazuhInstallPackCmd)
 	endpointWazuhCmd.AddCommand(endpointWazuhValidateCmd)
+	endpointElasticCmd.AddCommand(endpointElasticPrintConfigCmd)
+	endpointElasticCmd.AddCommand(endpointElasticInstallPackCmd)
+	endpointElasticCmd.AddCommand(endpointElasticUpCmd)
+	endpointElasticCmd.AddCommand(endpointElasticDownCmd)
 	endpointIntegrationsCmd.AddCommand(endpointCoworkCmd)
 	endpointHooksCmd.AddCommand(endpointHooksInstallCmd)
 	endpointHooksCmd.AddCommand(endpointHooksUninstallCmd)
@@ -294,6 +344,14 @@ func init() {
 	endpointWazuhValidateCmd.Flags().BoolVar(&endpointOpts.userMode, "user", true, "Use per-user endpoint paths")
 	endpointWazuhValidateCmd.Flags().BoolVar(&endpointOpts.systemMode, "system", false, "Use system endpoint paths and launch daemon")
 	endpointWazuhValidateCmd.Flags().StringVar(&endpointOpts.logPath, "log-path", "", "Runtime JSONL log path")
+	for _, c := range []*cobra.Command{endpointElasticPrintConfigCmd, endpointElasticInstallPackCmd, endpointElasticUpCmd} {
+		c.Flags().BoolVar(&endpointOpts.userMode, "user", true, "Use per-user endpoint paths")
+		c.Flags().BoolVar(&endpointOpts.systemMode, "system", false, "Use system endpoint paths and launch daemon")
+		c.Flags().StringVar(&endpointOpts.logPath, "log-path", "", "Runtime JSONL log path")
+	}
+	endpointElasticInstallPackCmd.Flags().StringVar(&endpointOpts.outputDir, "output", "", "Output directory for Elasticsearch content pack")
+	endpointElasticUpCmd.Flags().StringVar(&endpointOpts.elasticPackDir, "pack-dir", elastic.DefaultOutputDir, "Elasticsearch pack directory")
+	endpointElasticDownCmd.Flags().StringVar(&endpointOpts.elasticPackDir, "pack-dir", elastic.DefaultOutputDir, "Elasticsearch pack directory")
 	for _, c := range []*cobra.Command{endpointCoworkPrintConfigCmd, endpointCoworkSetupCmd, endpointCoworkStatusCmd, endpointCoworkValidateCmd} {
 		c.Flags().BoolVar(&endpointOpts.userMode, "user", true, "Use per-user endpoint paths")
 		c.Flags().BoolVar(&endpointOpts.systemMode, "system", false, "Use system endpoint paths and launch daemon")
@@ -440,6 +498,123 @@ func runEndpointWazuhValidate(cmd *cobra.Command, args []string) error {
 	fmt.Print(wazuh.LocalfileSnippet(cfg.LogPath))
 	fmt.Println("Expected base rule: 100500")
 	return nil
+}
+
+func runEndpointElasticInstallPack(cmd *cobra.Command, args []string) error {
+	cfg := loadOrDefaultConfig()
+	outputDir := endpointOpts.outputDir
+	if outputDir == "" {
+		outputDir = elastic.DefaultOutputDir
+	}
+	if err := elastic.InstallPack(outputDir, cfg.LogPath); err != nil {
+		return err
+	}
+	fmt.Printf("Elasticsearch content pack written to %s\n", outputDir)
+	return nil
+}
+
+func runEndpointElasticUp(ctx context.Context) error {
+	if runtime.GOOS != "darwin" {
+		return fmt.Errorf("beacon endpoint elastic up is currently macOS-only")
+	}
+	cfg := loadOrDefaultConfig()
+	logPath, err := filepath.Abs(cfg.LogPath)
+	if err != nil {
+		return err
+	}
+	packDir := endpointOpts.elasticPackDir
+	if packDir == "" {
+		packDir = elastic.DefaultOutputDir
+	}
+	if err := ensureElasticPack(packDir, logPath); err != nil {
+		return err
+	}
+	if err := ensureLogFile(logPath); err != nil {
+		return err
+	}
+	env := os.Environ()
+	env = append(env, "BEACON_LOG_DIR="+filepath.Dir(logPath))
+	if err := runDockerCompose(ctx, packDir, env, "up", "-d"); err != nil {
+		return err
+	}
+	fmt.Printf("Elasticsearch ready at http://localhost:%s\n", envDefault("BEACON_ELASTIC_ES_PORT", "9200"))
+	fmt.Printf("Kibana ready at http://localhost:%s\n", envDefault("BEACON_ELASTIC_KIBANA_PORT", "5601"))
+	fmt.Printf("Filebeat tailing %s\n", logPath)
+	return nil
+}
+
+func runEndpointElasticDown(ctx context.Context) error {
+	if runtime.GOOS != "darwin" {
+		return fmt.Errorf("beacon endpoint elastic down is currently macOS-only")
+	}
+	packDir := endpointOpts.elasticPackDir
+	if packDir == "" {
+		packDir = elastic.DefaultOutputDir
+	}
+	if _, err := os.Stat(filepath.Join(packDir, "docker-compose.yml")); os.IsNotExist(err) {
+		fmt.Printf("No Elasticsearch stack found for %s\n", packDir)
+		return nil
+	} else if err != nil {
+		return err
+	}
+	logPath, err := filepath.Abs(loadOrDefaultConfig().LogPath)
+	if err != nil {
+		return err
+	}
+	env := append(os.Environ(), "BEACON_LOG_DIR="+filepath.Dir(logPath))
+	if err := runDockerCompose(ctx, packDir, env, "down", "--remove-orphans"); err != nil {
+		return err
+	}
+	fmt.Printf("Elasticsearch stack stopped for %s\n", packDir)
+	return nil
+}
+
+func ensureElasticPack(packDir, logPath string) error {
+	if _, err := os.Stat(filepath.Join(packDir, "docker-compose.yml")); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	if err := elastic.InstallPack(packDir, logPath); err != nil {
+		return err
+	}
+	fmt.Printf("Elasticsearch content pack written to %s\n", packDir)
+	return nil
+}
+
+func ensureLogFile(path string) error {
+	if path == "" {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		return err
+	}
+	return file.Close()
+}
+
+func runDockerCompose(ctx context.Context, dir string, env []string, args ...string) error {
+	if _, err := os.Stat(filepath.Join(dir, "docker-compose.yml")); err != nil {
+		return fmt.Errorf("docker-compose.yml not found in %s: %w", dir, err)
+	}
+	fullArgs := append([]string{"compose"}, args...)
+	cmd := exec.CommandContext(ctx, "docker", fullArgs...)
+	cmd.Dir = dir
+	cmd.Env = env
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func envDefault(name, fallback string) string {
+	value := strings.TrimSpace(os.Getenv(name))
+	if value == "" {
+		return fallback
+	}
+	return value
 }
 
 func runEndpointDashboard(cmd *cobra.Command, args []string) error {

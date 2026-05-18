@@ -40,7 +40,7 @@ locally.
 
 Beacon is built to be easy to deploy for Security and IT teams through
 [MDM deployment](https://docs.asymptotelabs.ai/cli/security-it-teams) and to
-connect to Wazuh, Splunk HEC, or customer-managed SIEM pipelines, while
+connect to Wazuh, Elastic, Splunk HEC, or customer-managed SIEM pipelines, while
 remaining visibility-first and local-first during normal endpoint collection.
 
 ## High-Level Architecture
@@ -57,7 +57,7 @@ leaving forwarding under customer control.
 - **Beacon endpoint layer:** Local processing normalizes events, applies
   retention and redaction settings, and writes durable endpoint telemetry.
 - **Output layer:** Teams inspect events in the local dashboard, retain JSONL,
-  or forward records into Wazuh, Splunk HEC, and customer-managed SIEM
+  or forward records into Wazuh, Elastic, Splunk HEC, and customer-managed SIEM
   pipelines.
 
 Beacon filters generic process and runtime metrics, such as Node.js event loop,
@@ -81,6 +81,23 @@ records during rollout, testing, and investigations.
 <p align="center">
   <img src="images/dashboard-log-search.png" alt="Beacon dashboard log search" width="860">
 </p>
+
+## Elastic
+
+Beacon ships an Elastic content pack for teams that want to search endpoint
+events in Elasticsearch and Kibana without giving Beacon cluster credentials.
+The pack tails the same local `runtime.jsonl` file with Filebeat or standalone
+Elastic Agent, installs ECS-oriented templates and an ingest pipeline, and
+includes starter Kibana assets.
+
+```bash
+beacon endpoint elastic install-pack --output ./beacon-elastic-pack
+beacon endpoint elastic up --pack-dir ./beacon-elastic-pack
+```
+
+The local stack binds Elasticsearch and Kibana to loopback. Existing self-managed
+or Elastic Cloud deployments can use the same pack by pointing Filebeat at their
+cluster with `ES_HOSTS` and `ES_API_KEY`.
 
 ## Start Here
 
