@@ -43,6 +43,40 @@ Beacon is built to be easy to deploy for Security and IT teams through
 connect to Wazuh, Elastic, Splunk HEC, or customer-managed SIEM pipelines, while
 remaining visibility-first and local-first during normal endpoint collection.
 
+## Supported Surfaces
+
+Beacon captures supported coding-agent activity locally and writes normalized
+endpoint events that teams can inspect in place or forward into customer-managed
+security pipelines.
+
+### Coding Agents / Runtimes
+
+| Agent Harness | Support path |
+| --- | --- |
+| Claude Code | Local OpenTelemetry configuration |
+| Codex CLI | Local OpenTelemetry configuration |
+| OpenCode | Beacon hook adapter |
+| Factory Droid | Local OpenTelemetry configuration and optional hook adapter |
+| Claude Cowork | Admin-configured OpenTelemetry setup |
+| Cursor | Beacon hook adapter |
+
+### SIEM / Output Destinations
+
+| SIEM / output destination | Support path |
+| --- | --- |
+| Local JSONL | Default endpoint log and local dashboard source |
+| Wazuh | Localfile configuration and Beacon Wazuh content pack |
+| Elastic | Filebeat or Elastic Agent content pack over local JSONL |
+| Splunk HEC | Optional endpoint forwarding during install or repair |
+| Customer-managed SIEM pipelines | Forwarding from local Beacon JSONL under customer control |
+
+### MDM Deployment
+
+| MDM platform | Support path |
+| --- | --- |
+| Jamf Pro | macOS package, policy scripts, validation, and Extension Attributes |
+| Fleet | macOS package and user-context deployment helpers |
+
 ## High-Level Architecture
 
 Beacon keeps collection, processing, and inspection local to the endpoint while
@@ -81,40 +115,6 @@ records during rollout, testing, and investigations.
 <p align="center">
   <img src="images/dashboard-log-search.png" alt="Beacon dashboard log search" width="860">
 </p>
-
-## Supported Surfaces
-
-Beacon captures supported coding-agent activity locally and writes normalized
-endpoint events that teams can inspect in place or forward into customer-managed
-security pipelines.
-
-### Coding Agents / Runtimes
-
-| Coding agent / runtime | Support path |
-| --- | --- |
-| Claude Code | Local OpenTelemetry configuration |
-| Codex CLI | Local OpenTelemetry configuration |
-| OpenCode | Beacon hook adapter |
-| Factory Droid | Local OpenTelemetry configuration and optional hook adapter |
-| Claude Cowork | Admin-configured OpenTelemetry setup |
-| Cursor | Beacon hook adapter |
-
-### SIEM / Output Destinations
-
-| SIEM / output destination | Support path |
-| --- | --- |
-| Local JSONL | Default endpoint log and local dashboard source |
-| Wazuh | Localfile configuration and Beacon Wazuh content pack |
-| Elastic | Filebeat or Elastic Agent content pack over local JSONL |
-| Splunk HEC | Optional endpoint forwarding during install or repair |
-| Customer-managed SIEM pipelines | Forwarding from local Beacon JSONL under customer control |
-
-### MDM Deployment
-
-| MDM platform | Support path |
-| --- | --- |
-| Jamf Pro | macOS package, policy scripts, validation, and Extension Attributes |
-| Fleet | macOS package and user-context deployment helpers |
 
 ## Start Here
 
