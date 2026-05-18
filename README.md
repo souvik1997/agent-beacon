@@ -82,22 +82,39 @@ records during rollout, testing, and investigations.
   <img src="images/dashboard-log-search.png" alt="Beacon dashboard log search" width="860">
 </p>
 
-## Elastic
+## Supported Surfaces
 
-Beacon ships an Elastic content pack for teams that want to search endpoint
-events in Elasticsearch and Kibana without giving Beacon cluster credentials.
-The pack tails the same local `runtime.jsonl` file with Filebeat or standalone
-Elastic Agent, installs ECS-oriented templates and an ingest pipeline, and
-includes starter Kibana assets.
+Beacon captures supported coding-agent activity locally and writes normalized
+endpoint events that teams can inspect in place or forward into customer-managed
+security pipelines.
 
-```bash
-beacon endpoint elastic install-pack --output ./beacon-elastic-pack
-beacon endpoint elastic up --pack-dir ./beacon-elastic-pack
-```
+### Coding Agents / Runtimes
 
-The local stack binds Elasticsearch and Kibana to loopback. Existing self-managed
-or Elastic Cloud deployments can use the same pack by pointing Filebeat at their
-cluster with `ES_HOSTS` and `ES_API_KEY`.
+| Coding agent / runtime | Support path |
+| --- | --- |
+| Claude Code | Local OpenTelemetry configuration |
+| Codex CLI | Local OpenTelemetry configuration |
+| OpenCode | Beacon hook adapter |
+| Factory Droid | Local OpenTelemetry configuration and optional hook adapter |
+| Claude Cowork | Admin-configured OpenTelemetry setup |
+| Cursor | Beacon hook adapter |
+
+### SIEM / Output Destinations
+
+| SIEM / output destination | Support path |
+| --- | --- |
+| Local JSONL | Default endpoint log and local dashboard source |
+| Wazuh | Localfile configuration and Beacon Wazuh content pack |
+| Elastic | Filebeat or Elastic Agent content pack over local JSONL |
+| Splunk HEC | Optional endpoint forwarding during install or repair |
+| Customer-managed SIEM pipelines | Forwarding from local Beacon JSONL under customer control |
+
+### MDM Deployment
+
+| MDM platform | Support path |
+| --- | --- |
+| Jamf Pro | macOS package, policy scripts, validation, and Extension Attributes |
+| Fleet | macOS package and user-context deployment helpers |
 
 ## Start Here
 
