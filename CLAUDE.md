@@ -130,7 +130,9 @@ CI release automation should:
 - Build or restore the collector binaries expected by `.goreleaser.yaml` under
   `collector-builder/dist/beacon-otelcol/<goos>_<goarch>/beacon-otelcol`.
 - Run `goreleaser check` before publishing.
-- Run `goreleaser release --clean` from `cli/beacon`.
+- Run `goreleaser release --clean --parallelism 1` from `cli/beacon` because
+  the release pre-hook writes target-specific `beacon-hooks` binaries to a
+  shared embedded path.
 - Provide `GITHUB_TOKEN` for the GitHub release and `HOMEBREW_TAP_TOKEN` with
   write access to `asymptote-labs/homebrew-tap`.
 
@@ -182,7 +184,7 @@ git -C .tmp/release-<tag> tag -a <tag> -m "<tag>"
 git -C .tmp/release-<tag> push origin <tag>
 cd .tmp/release-<tag>/cli/beacon
 goreleaser check
-GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token)}" HOMEBREW_TAP_TOKEN="${HOMEBREW_TAP_TOKEN:-$(gh auth token)}" goreleaser release --clean
+GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token)}" HOMEBREW_TAP_TOKEN="${HOMEBREW_TAP_TOKEN:-$(gh auth token)}" goreleaser release --clean --parallelism 1
 ```
 
 After GoReleaser succeeds, verify both the GitHub release and the Homebrew tap:
