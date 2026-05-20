@@ -218,7 +218,7 @@ func (e *beaconExporter) eventFromLog(resourceAttrs map[string]interface{}, reco
 		"otel_signal": "logs",
 		"severity":    record.SeverityText(),
 	})
-	normalizeCodexLogEvent(&event, attrs)
+	e.normalizeCodexLogEvent(&event, attrs)
 	return event
 }
 
@@ -252,7 +252,7 @@ func (e *beaconExporter) shouldDropSpan(resourceAttrs map[string]interface{}, sp
 	return !e.cfg.IncludeCodexSpans
 }
 
-func normalizeCodexLogEvent(event *beaconEvent, attrs map[string]interface{}) {
+func (e *beaconExporter) normalizeCodexLogEvent(event *beaconEvent, attrs map[string]interface{}) {
 	if event == nil || event.Harness.Name != "codex_cli" {
 		return
 	}
@@ -264,7 +264,7 @@ func normalizeCodexLogEvent(event *beaconEvent, attrs map[string]interface{}) {
 	case codexUserPrompt:
 		event.Event.Action = "prompt.submitted"
 		event.Event.Category = "prompt"
-		if prompt := firstString(attrs, "prompt", "gen_ai.prompt", "user_prompt", "input.prompt"); prompt != "" {
+		if prompt := firstString(attrs, "prompt", "gen_ai.prompt", "user_prompt", "input.prompt"); e.cfg.ContentRetention != "metadata" && prompt != "" {
 			event.Message = prompt
 		} else {
 			event.Message = "Codex prompt submitted"

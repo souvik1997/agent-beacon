@@ -514,6 +514,35 @@ func TestCodexToolResultExtractsShellCommand(t *testing.T) {
 	}
 }
 
+func TestMetadataRetentionOmitsCodexPromptMessage(t *testing.T) {
+	exp, err := newExporter(&Config{
+		Path:             filepath.Join(t.TempDir(), "runtime.jsonl"),
+		MaxEventBytes:    defaultMaxEventBytes,
+		RotateBytes:      defaultRotateBytes,
+		RedactSecrets:    true,
+		ContentRetention: "metadata",
+	}, exporter.Settings{})
+	if err != nil {
+		t.Fatalf("newExporter returned error: %v", err)
+	}
+	rec := plog.NewLogs().ResourceLogs().AppendEmpty().ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+	rec.Body().SetStr("op.dispatch.user_input_with_turn_context")
+	rec.Attributes().PutStr("service.name", "codex_cli_rs")
+	rec.Attributes().PutStr("event.name", codexUserPrompt)
+	rec.Attributes().PutStr("prompt", "do not leak token=codex-secret")
+
+	event := exp.eventFromLog(nil, rec)
+	if event.Prompt != nil {
+		t.Fatalf("metadata retention should omit prompt: %#v", event.Prompt)
+	}
+	if strings.Contains(event.Message, "do not leak") || strings.Contains(event.Message, "codex-secret") {
+		t.Fatalf("metadata retention leaked prompt in message: %q", event.Message)
+	}
+	if event.Message != "Codex prompt submitted" {
+		t.Fatalf("message = %q, want metadata-safe placeholder", event.Message)
+	}
+}
+
 func TestConsumeLogsMapsGeminiPrompt(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "runtime.jsonl")
 	exp, err := newExporter(&Config{
