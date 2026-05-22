@@ -127,7 +127,7 @@ func (e *beaconExporter) consumeMetrics(ctx context.Context, metrics pmetric.Met
 			scopeMetrics := resourceMetrics.ScopeMetrics().At(j)
 			for k := 0; k < scopeMetrics.Metrics().Len(); k++ {
 				metric := scopeMetrics.Metrics().At(k)
-				if shouldDropMetric(resourceAttrs, metric.Name(), e.cfg.IncludeRuntimeMetrics, e.cfg.IncludeOpenClawRuntimeMetrics) {
+				if shouldDropMetric(resourceAttrs, metric.Name(), e.cfg.IncludeRuntimeMetrics) {
 					continue
 				}
 				event := e.eventFromMetric(resourceAttrs, metric)
@@ -167,11 +167,11 @@ func isNoisyCodexLog(attrs map[string]interface{}, body string) bool {
 	return strings.HasPrefix(eventName, "codex.")
 }
 
-func shouldDropMetric(resourceAttrs map[string]interface{}, name string, includeRuntimeMetrics, includeOpenClawRuntimeMetrics bool) bool {
+func shouldDropMetric(resourceAttrs map[string]interface{}, name string, includeRuntimeMetrics bool) bool {
 	if shouldDropCodexMetric(resourceAttrs, name) {
 		return true
 	}
-	if shouldDropOpenClawMetric(resourceAttrs, name, includeOpenClawRuntimeMetrics) {
+	if shouldDropOpenClawMetric(resourceAttrs, name, includeRuntimeMetrics) {
 		return true
 	}
 	if !includeRuntimeMetrics && shouldDropRuntimeMetric(name) {
@@ -207,8 +207,8 @@ func shouldDropCodexMetric(resourceAttrs map[string]interface{}, name string) bo
 	return strings.HasPrefix(normalized, "codex.")
 }
 
-func shouldDropOpenClawMetric(resourceAttrs map[string]interface{}, name string, includeOpenClawRuntimeMetrics bool) bool {
-	if includeOpenClawRuntimeMetrics {
+func shouldDropOpenClawMetric(resourceAttrs map[string]interface{}, name string, includeRuntimeMetrics bool) bool {
+	if includeRuntimeMetrics {
 		return false
 	}
 	normalized := strings.ToLower(strings.TrimSpace(name))

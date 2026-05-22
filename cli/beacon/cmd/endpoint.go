@@ -30,42 +30,41 @@ import (
 )
 
 var endpointOpts struct {
-	userMode                      bool
-	systemMode                    bool
-	logPath                       string
-	harnesses                     string
-	hookHarnesses                 string
-	outputDir                     string
-	jsonOutput                    bool
-	grpcPort                      int
-	httpPort                      int
-	collectorPath                 string
-	includeRuntimeMetrics         bool
-	includeCodexSpans             bool
-	includeOpenClawRuntimeMetrics bool
-	keepLogs                      bool
-	keepConfig                    bool
-	noStart                       bool
-	coworkHeaders                 string
-	coworkEndpoint                string
-	coworkResourceAttributes      string
-	coworkNgrok                   bool
-	coworkOpen                    bool
-	coworkSince                   string
-	openClawEndpoint              string
-	openClawSince                 string
-	elasticPackDir                string
-	hookLevel                     string
-	contentRetention              string
-	splunkHECEndpoint             string
-	splunkHECToken                string
-	splunkIndex                   string
-	splunkSource                  string
-	splunkSourcetype              string
-	splunkInsecureSkipVerify      bool
-	splunkCAFile                  string
-	dashboardAddr                 string
-	dashboardOpen                 bool
+	userMode                 bool
+	systemMode               bool
+	logPath                  string
+	harnesses                string
+	hookHarnesses            string
+	outputDir                string
+	jsonOutput               bool
+	grpcPort                 int
+	httpPort                 int
+	collectorPath            string
+	includeRuntimeMetrics    bool
+	includeCodexSpans        bool
+	keepLogs                 bool
+	keepConfig               bool
+	noStart                  bool
+	coworkHeaders            string
+	coworkEndpoint           string
+	coworkResourceAttributes string
+	coworkNgrok              bool
+	coworkOpen               bool
+	coworkSince              string
+	openClawEndpoint         string
+	openClawSince            string
+	elasticPackDir           string
+	hookLevel                string
+	contentRetention         string
+	splunkHECEndpoint        string
+	splunkHECToken           string
+	splunkIndex              string
+	splunkSource             string
+	splunkSourcetype         string
+	splunkInsecureSkipVerify bool
+	splunkCAFile             string
+	dashboardAddr            string
+	dashboardOpen            bool
 }
 
 var endpointCmd = &cobra.Command{
@@ -438,9 +437,8 @@ func init() {
 	endpointInstallCmd.Flags().IntVar(&endpointOpts.grpcPort, "otlp-grpc-port", endpointconfig.DefaultGRPCPort, "Local OTLP gRPC port")
 	endpointInstallCmd.Flags().IntVar(&endpointOpts.httpPort, "otlp-http-port", endpointconfig.DefaultHTTPPort, "Local OTLP HTTP port")
 	endpointInstallCmd.Flags().StringVar(&endpointOpts.collectorPath, "collector", "", "Path to a beacon-otelcol binary")
-	endpointInstallCmd.Flags().BoolVar(&endpointOpts.includeRuntimeMetrics, "include-runtime-metrics", false, "Include generic process/runtime OTLP metrics in the runtime JSONL log")
+	endpointInstallCmd.Flags().BoolVar(&endpointOpts.includeRuntimeMetrics, "include-runtime-metrics", false, "Include generic process/runtime OTLP metrics and OpenClaw operational metrics in the runtime JSONL log")
 	endpointInstallCmd.Flags().BoolVar(&endpointOpts.includeCodexSpans, "include-codex-spans", false, "Include high-volume Codex OTLP spans for troubleshooting")
-	endpointInstallCmd.Flags().BoolVar(&endpointOpts.includeOpenClawRuntimeMetrics, "include-openclaw-runtime-metrics", false, "Include high-volume OpenClaw operational OTLP metrics in the runtime JSONL log")
 	endpointInstallCmd.Flags().BoolVar(&endpointOpts.noStart, "no-start", false, "Write files without starting the launchd service")
 	endpointInstallCmd.Flags().StringVar(&endpointOpts.contentRetention, "content-retention", "full", "Content retention mode: metadata, redacted, or full")
 	registerSplunkFlags(endpointInstallCmd)
@@ -448,9 +446,8 @@ func init() {
 	endpointRepairCmd.Flags().IntVar(&endpointOpts.grpcPort, "otlp-grpc-port", endpointconfig.DefaultGRPCPort, "Local OTLP gRPC port")
 	endpointRepairCmd.Flags().IntVar(&endpointOpts.httpPort, "otlp-http-port", endpointconfig.DefaultHTTPPort, "Local OTLP HTTP port")
 	endpointRepairCmd.Flags().StringVar(&endpointOpts.collectorPath, "collector", "", "Path to a beacon-otelcol binary")
-	endpointRepairCmd.Flags().BoolVar(&endpointOpts.includeRuntimeMetrics, "include-runtime-metrics", false, "Include generic process/runtime OTLP metrics in the runtime JSONL log")
+	endpointRepairCmd.Flags().BoolVar(&endpointOpts.includeRuntimeMetrics, "include-runtime-metrics", false, "Include generic process/runtime OTLP metrics and OpenClaw operational metrics in the runtime JSONL log")
 	endpointRepairCmd.Flags().BoolVar(&endpointOpts.includeCodexSpans, "include-codex-spans", false, "Include high-volume Codex OTLP spans for troubleshooting")
-	endpointRepairCmd.Flags().BoolVar(&endpointOpts.includeOpenClawRuntimeMetrics, "include-openclaw-runtime-metrics", false, "Include high-volume OpenClaw operational OTLP metrics in the runtime JSONL log")
 	endpointRepairCmd.Flags().BoolVar(&endpointOpts.noStart, "no-start", false, "Write files without starting the launchd service")
 	endpointRepairCmd.Flags().StringVar(&endpointOpts.contentRetention, "content-retention", "full", "Content retention mode: metadata, redacted, or full")
 	registerSplunkFlags(endpointRepairCmd)
@@ -982,18 +979,17 @@ func runEndpointDashboard(cmd *cobra.Command, args []string) error {
 
 func runEndpointInstall(cmd *cobra.Command, args []string) error {
 	result, err := lifecycle.Install(lifecycle.InstallOptions{
-		UserMode:                      endpointUserMode(),
-		LogPath:                       endpointOpts.logPath,
-		Harnesses:                     splitCSV(endpointOpts.harnesses),
-		GRPCPort:                      endpointOpts.grpcPort,
-		HTTPPort:                      endpointOpts.httpPort,
-		CollectorPath:                 endpointOpts.collectorPath,
-		StartService:                  !endpointOpts.noStart,
-		ContentRetention:              endpointconfig.ContentRetention(endpointOpts.contentRetention),
-		IncludeRuntimeMetrics:         endpointOpts.includeRuntimeMetrics,
-		IncludeCodexSpans:             endpointOpts.includeCodexSpans,
-		IncludeOpenClawRuntimeMetrics: endpointOpts.includeOpenClawRuntimeMetrics,
-		SplunkHEC:                     splunkHECOptions(),
+		UserMode:              endpointUserMode(),
+		LogPath:               endpointOpts.logPath,
+		Harnesses:             splitCSV(endpointOpts.harnesses),
+		GRPCPort:              endpointOpts.grpcPort,
+		HTTPPort:              endpointOpts.httpPort,
+		CollectorPath:         endpointOpts.collectorPath,
+		StartService:          !endpointOpts.noStart,
+		ContentRetention:      endpointconfig.ContentRetention(endpointOpts.contentRetention),
+		IncludeRuntimeMetrics: endpointOpts.includeRuntimeMetrics,
+		IncludeCodexSpans:     endpointOpts.includeCodexSpans,
+		SplunkHEC:             splunkHECOptions(),
 	})
 	if err != nil {
 		return err
@@ -1115,18 +1111,17 @@ func runEndpointUninstall(cmd *cobra.Command, args []string) error {
 
 func runEndpointRepair(cmd *cobra.Command, args []string) error {
 	result, err := lifecycle.Repair(lifecycle.InstallOptions{
-		UserMode:                      endpointUserMode(),
-		LogPath:                       endpointOpts.logPath,
-		Harnesses:                     splitCSV(endpointOpts.harnesses),
-		GRPCPort:                      endpointOpts.grpcPort,
-		HTTPPort:                      endpointOpts.httpPort,
-		CollectorPath:                 endpointOpts.collectorPath,
-		StartService:                  !endpointOpts.noStart,
-		ContentRetention:              endpointconfig.ContentRetention(endpointOpts.contentRetention),
-		IncludeRuntimeMetrics:         endpointOpts.includeRuntimeMetrics,
-		IncludeCodexSpans:             endpointOpts.includeCodexSpans,
-		IncludeOpenClawRuntimeMetrics: endpointOpts.includeOpenClawRuntimeMetrics,
-		SplunkHEC:                     splunkHECOptions(),
+		UserMode:              endpointUserMode(),
+		LogPath:               endpointOpts.logPath,
+		Harnesses:             splitCSV(endpointOpts.harnesses),
+		GRPCPort:              endpointOpts.grpcPort,
+		HTTPPort:              endpointOpts.httpPort,
+		CollectorPath:         endpointOpts.collectorPath,
+		StartService:          !endpointOpts.noStart,
+		ContentRetention:      endpointconfig.ContentRetention(endpointOpts.contentRetention),
+		IncludeRuntimeMetrics: endpointOpts.includeRuntimeMetrics,
+		IncludeCodexSpans:     endpointOpts.includeCodexSpans,
+		SplunkHEC:             splunkHECOptions(),
 	})
 	if err != nil {
 		return err

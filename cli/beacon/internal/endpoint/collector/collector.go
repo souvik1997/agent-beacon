@@ -123,10 +123,6 @@ func ConfigYAML(cfg endpointconfig.Config) string {
 	if cfg.Collector.IncludeCodexSpans {
 		codexSpansYAML = "    include_codex_spans: true\n"
 	}
-	openClawRuntimeMetricsYAML := ""
-	if cfg.Collector.IncludeOpenClawRuntimeMetrics {
-		openClawRuntimeMetricsYAML = "    include_openclaw_runtime_metrics: true\n"
-	}
 	return fmt.Sprintf(`receivers:
   otlp:
     protocols:
@@ -173,7 +169,7 @@ service:
       receivers: [otlp]
       processors: [memory_limiter, batch]
       exporters: %s
-`, cfg.Collector.GRPCPort, cfg.Collector.HTTPPort, cfg.LogPath, cfg.ContentRetention, runtimeMetricsYAML+codexSpansYAML+openClawRuntimeMetricsYAML+splunkExporter, exporters, exporters, exporters)
+`, cfg.Collector.GRPCPort, cfg.Collector.HTTPPort, cfg.LogPath, cfg.ContentRetention, runtimeMetricsYAML+codexSpansYAML+splunkExporter, exporters, exporters, exporters)
 }
 
 func splunkHECYAML(cfg endpointconfig.Config) string {

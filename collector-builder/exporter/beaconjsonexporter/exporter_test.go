@@ -351,12 +351,12 @@ func TestConsumeMetricsDropsOpenClawOperationalMetricsByDefault(t *testing.T) {
 func TestConsumeMetricsIncludesOpenClawOperationalMetricsWhenConfigured(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "runtime.jsonl")
 	exp, err := newExporter(&Config{
-		Path:                          path,
-		MaxEventBytes:                 defaultMaxEventBytes,
-		RotateBytes:                   defaultRotateBytes,
-		RedactSecrets:                 true,
-		ContentRetention:              "metadata",
-		IncludeOpenClawRuntimeMetrics: true,
+		Path:                  path,
+		MaxEventBytes:         defaultMaxEventBytes,
+		RotateBytes:           defaultRotateBytes,
+		RedactSecrets:         true,
+		ContentRetention:      "metadata",
+		IncludeRuntimeMetrics: true,
 	}, exporter.Settings{})
 	if err != nil {
 		t.Fatalf("newExporter returned error: %v", err)
