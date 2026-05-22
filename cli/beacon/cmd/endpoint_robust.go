@@ -353,7 +353,7 @@ func hookStatuses(targets []string) map[string]hookTargetResult {
 			statuses[name] = hookTargetResult{Target: name, Status: targetStatus(status.Installed), Installed: status.Installed, Message: status.Message, Path: status.HooksJSONPath, Raw: status}
 		case "factory", "droid":
 			status := endpointhooks.FactoryHookStatus(endpointhooks.FactoryOptions{Level: endpointhooks.Level(endpointOpts.hookLevel), LogPath: cfg.LogPath, UserMode: cfg.UserMode})
-			statuses["factory"] = hookTargetResult{Target: "factory", Status: targetStatus(status.Installed), Installed: status.Installed, Message: status.Message, Path: status.SettingsPath, Raw: status}
+			statuses[name] = hookTargetResult{Target: name, Status: targetStatus(status.Installed), Installed: status.Installed, Message: status.Message, Path: status.SettingsPath, Raw: status}
 		case "opencode":
 			status := endpointhooks.OpenCodeHookStatus(endpointhooks.OpenCodeOptions{Level: endpointhooks.Level(endpointOpts.hookLevel), LogPath: cfg.LogPath, UserMode: cfg.UserMode})
 			statuses[name] = hookTargetResult{Target: name, Status: targetStatus(status.Installed), Installed: status.Installed, Message: status.Message, Path: status.PluginPath, Raw: status}
@@ -469,7 +469,7 @@ func writeEventBundleFiles(out, logPath string, includeRaw bool) error {
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return writeJSONFile(filepath.Join(out, "event-summaries.json"), []map[string]interface{}{})
 		}
 		return err
 	}
