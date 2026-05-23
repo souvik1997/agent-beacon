@@ -63,6 +63,27 @@ func TestGetEventReturnsNotFound(t *testing.T) {
 	}
 }
 
+func TestGetEventRequiresLogPath(t *testing.T) {
+	if _, err := GetEvent("", "line-1"); err == nil {
+		t.Fatal("GetEvent accepted empty log path")
+	}
+}
+
+func TestListFiltersAddsWindowCaveatWhenTruncated(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	writeLog(t, path,
+		testEvent("2026-05-13T01:00:00Z", "cursor", "prompt.submitted", "prompt"),
+		testEvent("2026-05-13T01:01:00Z", "claude", "prompt.submitted", "prompt"),
+	)
+	result, err := ListFilters(Query{LogPath: path, Limit: 1})
+	if err != nil {
+		t.Fatalf("ListFilters returned error: %v", err)
+	}
+	if !result.Meta.Truncated || len(result.Meta.Caveats) == 0 {
+		t.Fatalf("meta = %#v, want truncated caveat", result.Meta)
+	}
+}
+
 func TestSearchReportsMalformedLines(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "runtime.jsonl")
 	event := testEvent("2026-05-13T01:00:00Z", "cursor", "command.executed", "command")

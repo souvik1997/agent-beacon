@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -55,8 +56,8 @@ func init() {
 		c.Flags().BoolVar(&mcpOpts.userMode, "user", true, "Use per-user endpoint paths")
 		c.Flags().BoolVar(&mcpOpts.systemMode, "system", false, "Use system endpoint paths")
 		c.Flags().StringVar(&mcpOpts.logPath, "log-path", "", "Runtime JSONL log path")
-		c.Flags().StringVar(&mcpOpts.transport, "transport", mcpserver.TransportStdio, "MCP transport: stdio or http")
-		c.Flags().StringVar(&mcpOpts.addr, "addr", defaultMCPHTTPAddr, "Loopback HTTP listen address for --transport http")
+		c.Flags().StringVar(&mcpOpts.transport, "transport", mcpserver.TransportStdio, "MCP transport: stdio or http (HTTP JSON-RPC)")
+		c.Flags().StringVar(&mcpOpts.addr, "addr", defaultMCPHTTPAddr, "Loopback HTTP JSON-RPC listen address for --transport http")
 	}
 }
 
@@ -65,7 +66,7 @@ func runMCPServe(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	runtimeLog := resolveMCPRuntimeLog()
-	server := mcpserver.New(mcpserver.Options{LogPath: runtimeLog.EffectiveLogPath, Stderr: os.Stderr})
+	server := mcpserver.New(mcpserver.Options{LogPath: runtimeLog.EffectiveLogPath})
 	switch normalizedTransport() {
 	case mcpserver.TransportStdio:
 		return server.ServeStdio(cmd.Context(), os.Stdin, os.Stdout)
@@ -113,12 +114,19 @@ func runMCPDoctor(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Content retention: %s\n", cfg.ContentRetention)
 	sampled, malformed, archives, err := activity.InspectLog(runtimeLog.EffectiveLogPath)
 	if err != nil {
-		return err
+		if errors.Is(err, os.ErrNotExist) {
+			fmt.Println("Runtime log check: no log file yet")
+			fmt.Println("Beacon MCP can still start, but activity answers will be empty until endpoint telemetry writes events.")
+		} else {
+			return err
+		}
+	} else {
+		fmt.Println("Runtime log check: ok")
 	}
 	fmt.Printf("Sampled events: %d\n", sampled)
 	fmt.Printf("Malformed lines: %d\n", malformed)
 	fmt.Printf("Readable archives: %d\n", len(archives))
-	server := mcpserver.New(mcpserver.Options{LogPath: runtimeLog.EffectiveLogPath, Stderr: os.Stderr})
+	server := mcpserver.New(mcpserver.Options{LogPath: runtimeLog.EffectiveLogPath})
 	if err := server.HasExpectedTools(); err != nil {
 		return err
 	}

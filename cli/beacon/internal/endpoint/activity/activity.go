@@ -54,8 +54,8 @@ type SearchResult struct {
 }
 
 type SummaryResult struct {
-	Meta    ResultMeta        `json:"meta"`
-	Summary dashboard.Summary `json:"summary"`
+	Meta    ResultMeta `json:"meta"`
+	Summary Summary    `json:"summary"`
 }
 
 type EventResult struct {
@@ -71,6 +71,43 @@ type FilterValuesResult struct {
 type ValueCount struct {
 	Value string `json:"value"`
 	Count int    `json:"count"`
+}
+
+type Count struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+}
+
+type Summary struct {
+	TotalEvents              int            `json:"total_events"`
+	LastEventTime            string         `json:"last_event_time,omitempty"`
+	ActiveSessions           int            `json:"active_sessions"`
+	MalformedLines           int            `json:"malformed_lines"`
+	CountsByAction           map[string]int `json:"counts_by_action"`
+	CountsByHarness          map[string]int `json:"counts_by_harness"`
+	CountsBySeverity         map[string]int `json:"counts_by_severity"`
+	CountsByCategory         map[string]int `json:"counts_by_category"`
+	CountsByApprovalDecision map[string]int `json:"counts_by_approval_decision"`
+	CountsByMCPServer        map[string]int `json:"counts_by_mcp_server"`
+	CountsByRepository       map[string]int `json:"counts_by_repository"`
+	CountsByModel            map[string]int `json:"counts_by_model"`
+	PromptEvents             int            `json:"prompt_events"`
+	ToolEvents               int            `json:"tool_events"`
+	CommandEvents            int            `json:"command_events"`
+	FileEvents               int            `json:"file_events"`
+	MCPEvents                int            `json:"mcp_events"`
+	ApprovalEvents           int            `json:"approval_events"`
+	HighSeverityEvents       int            `json:"high_severity_events"`
+	CriticalSeverityEvents   int            `json:"critical_severity_events"`
+	NeedsReviewEvents        int            `json:"needs_review_events"`
+	FailedToolEvents         int            `json:"failed_tool_events"`
+	DeniedApprovalEvents     int            `json:"denied_approval_events"`
+	PolicyBlockedEvents      int            `json:"policy_blocked_events"`
+	TopActions               []Count        `json:"top_actions"`
+	TopHarnesses             []Count        `json:"top_harnesses"`
+	TopModels                []Count        `json:"top_models"`
+	TopRepositories          []Count        `json:"top_repositories"`
+	TopMCPServers            []Count        `json:"top_mcp_servers"`
 }
 
 type EventSummary struct {
@@ -165,10 +202,13 @@ func Summarize(query Query) (SummaryResult, error) {
 	if err != nil {
 		return SummaryResult{}, err
 	}
-	return SummaryResult{Meta: metaFromResult(result), Summary: dashboard.BuildSummary(result)}, nil
+	return SummaryResult{Meta: metaFromResult(result), Summary: activitySummary(dashboard.BuildSummary(result))}, nil
 }
 
 func GetEvent(logPath, id string) (EventResult, error) {
+	if logPath == "" {
+		return EventResult{}, fmt.Errorf("runtime log path is required")
+	}
 	record, ok, err := dashboard.FindEvent(logPath, id)
 	if err != nil {
 		return EventResult{}, err
@@ -228,7 +268,11 @@ func ListFilters(query Query) (FilterValuesResult, error) {
 	for name, values := range counts {
 		filters[name] = topValues(values, 20)
 	}
-	return FilterValuesResult{Meta: metaFromResult(result), Filters: filters}, nil
+	meta := metaFromResult(result)
+	if result.Truncated {
+		meta.Caveats = append(meta.Caveats, "filter values are based on the returned event window")
+	}
+	return FilterValuesResult{Meta: meta, Filters: filters}, nil
 }
 
 func InspectLog(logPath string) (sampledEvents, malformedLines int, archives []string, err error) {
@@ -374,6 +418,48 @@ func contentCaveats(content *ContentSummary) []string {
 		caveats = append(caveats, "content was truncated")
 	}
 	return caveats
+}
+
+func activitySummary(summary dashboard.Summary) Summary {
+	return Summary{
+		TotalEvents:              summary.TotalEvents,
+		LastEventTime:            summary.LastEventTime,
+		ActiveSessions:           summary.ActiveSessions,
+		MalformedLines:           summary.MalformedLines,
+		CountsByAction:           summary.CountsByAction,
+		CountsByHarness:          summary.CountsByHarness,
+		CountsBySeverity:         summary.CountsBySeverity,
+		CountsByCategory:         summary.CountsByCategory,
+		CountsByApprovalDecision: summary.CountsByApprovalDecision,
+		CountsByMCPServer:        summary.CountsByMCPServer,
+		CountsByRepository:       summary.CountsByRepository,
+		CountsByModel:            summary.CountsByModel,
+		PromptEvents:             summary.PromptEvents,
+		ToolEvents:               summary.ToolEvents,
+		CommandEvents:            summary.CommandEvents,
+		FileEvents:               summary.FileEvents,
+		MCPEvents:                summary.MCPEvents,
+		ApprovalEvents:           summary.ApprovalEvents,
+		HighSeverityEvents:       summary.HighSeverityEvents,
+		CriticalSeverityEvents:   summary.CriticalSeverityEvents,
+		NeedsReviewEvents:        summary.NeedsReviewEvents,
+		FailedToolEvents:         summary.FailedToolEvents,
+		DeniedApprovalEvents:     summary.DeniedApprovalEvents,
+		PolicyBlockedEvents:      summary.PolicyBlockedEvents,
+		TopActions:               activityCounts(summary.TopActions),
+		TopHarnesses:             activityCounts(summary.TopHarnesses),
+		TopModels:                activityCounts(summary.TopModels),
+		TopRepositories:          activityCounts(summary.TopRepositories),
+		TopMCPServers:            activityCounts(summary.TopMCPServers),
+	}
+}
+
+func activityCounts(counts []dashboard.Count) []Count {
+	out := make([]Count, 0, len(counts))
+	for _, count := range counts {
+		out = append(out, Count{Name: count.Name, Count: count.Count})
+	}
+	return out
 }
 
 func add(counts map[string]int, value string) {

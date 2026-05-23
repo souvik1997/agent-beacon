@@ -1,3 +1,7 @@
+// Package mcpserver implements the small local MCP server surface Beacon needs
+// for activity querying. It intentionally supports the server methods exercised
+// by current desktop clients and tests: initialize, tools/list, tools/call, and
+// notifications without responses.
 package mcpserver
 
 import (
@@ -8,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -23,14 +26,12 @@ const (
 
 type Options struct {
 	LogPath string
-	Stderr  io.Writer
 }
 
 type Server struct {
 	logPath string
 	tools   map[string]Tool
 	order   []string
-	stderr  io.Writer
 }
 
 type Tool struct {
@@ -75,13 +76,9 @@ type textContent struct {
 }
 
 func New(opts Options) *Server {
-	if opts.Stderr == nil {
-		opts.Stderr = os.Stderr
-	}
 	server := &Server{
 		logPath: opts.LogPath,
 		tools:   map[string]Tool{},
-		stderr:  opts.Stderr,
 	}
 	server.registerTools()
 	return server
