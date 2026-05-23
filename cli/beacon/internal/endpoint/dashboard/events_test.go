@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/schema"
 )
@@ -247,6 +248,28 @@ func TestReadEventsFiltersByModel(t *testing.T) {
 	}
 	if got := result.Filters["model"]; got != "sonnet" {
 		t.Fatalf("model filter = %q, want sonnet", got)
+	}
+}
+
+func TestReadEventsFiltersByUntil(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	writeTestLog(t, path,
+		testEvent("2026-05-13T01:00:00Z", "cursor", "prompt.submitted", "prompt", "repo-a"),
+		testEvent("2026-05-13T02:00:00Z", "cursor", "command.executed", "command", "repo-b"),
+	)
+	until, err := time.Parse(time.RFC3339, "2026-05-13T01:30:00Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := ReadEvents(path, EventQuery{Until: until, Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadEvents returned error: %v", err)
+	}
+	if result.TotalMatched != 1 || result.Events[0].Event.Event.Action != "prompt.submitted" {
+		t.Fatalf("matched %d action %q, want prompt.submitted", result.TotalMatched, result.Events[0].Event.Event.Action)
+	}
+	if got := result.Filters["until"]; got != "2026-05-13T01:30:00Z" {
+		t.Fatalf("until filter = %q, want RFC3339 value", got)
 	}
 }
 

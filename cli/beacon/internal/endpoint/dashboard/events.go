@@ -32,6 +32,7 @@ type EventRecord struct {
 type EventQuery struct {
 	Limit      int
 	Since      time.Time
+	Until      time.Time
 	Q          string
 	Harness    string
 	Model      string
@@ -285,6 +286,11 @@ func matchesQuery(record EventRecord, query EventQuery) bool {
 			return false
 		}
 	}
+	if !query.Until.IsZero() {
+		if record.Parsed.IsZero() || record.Parsed.After(query.Until) {
+			return false
+		}
+	}
 	if query.Harness != "" && !strings.EqualFold(event.Harness.Name, query.Harness) {
 		return false
 	}
@@ -504,6 +510,9 @@ func activeFilters(query EventQuery) map[string]string {
 	add("wazuh_level", query.WazuhLevel)
 	if !query.Since.IsZero() {
 		filters["since"] = query.Since.Format(time.RFC3339)
+	}
+	if !query.Until.IsZero() {
+		filters["until"] = query.Until.Format(time.RFC3339)
 	}
 	if len(filters) == 0 {
 		return nil
