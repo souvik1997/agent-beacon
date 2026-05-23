@@ -200,6 +200,11 @@ func parseQuery(r *http.Request, fallbackLimit int) EventQuery {
 			query.Since = parsed
 		}
 	}
+	if until := q.Get("until"); until != "" {
+		if parsed, err := time.Parse(time.RFC3339, until); err == nil {
+			query.Until = parsed
+		}
+	}
 	return query
 }
 
