@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -73,12 +75,24 @@ func runMCPServe(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Fprintf(os.Stderr, "Beacon MCP server: http://%s/mcp\n", mcpOpts.addr)
 		fmt.Fprintf(os.Stderr, "Runtime log: %s\n", runtimeLog.EffectiveLogPath)
+		ctx := cmd.Context()
 		httpServer := &http.Server{
 			Addr:              mcpOpts.addr,
 			Handler:           server.HTTPHandler(),
 			ReadHeaderTimeout: 5 * time.Second,
+			BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		}
-		return httpServer.ListenAndServe()
+		go func() {
+			<-ctx.Done()
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			httpServer.Shutdown(shutdownCtx)
+		}()
+		err := httpServer.ListenAndServe()
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
 	default:
 		return fmt.Errorf("unsupported transport %q", mcpOpts.transport)
 	}
