@@ -660,6 +660,21 @@ func TestCopilotStatusValidatesExpectedHTTPPort(t *testing.T) {
 	}
 }
 
+func TestCopilotStatusMergesProfileWithGenericProcessEndpoint(t *testing.T) {
+	clearCopilotEnv(t)
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318")
+
+	path := filepath.Join(t.TempDir(), "profile")
+	if err := os.WriteFile(path, []byte("export COPILOT_OTEL_ENABLED=true\n"), 0600); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	status, msg := copilotStatus(path)
+	if status != TelemetryEnabled {
+		t.Fatalf("copilotStatus = %q (%s), want %q; generic OTEL_EXPORTER_OTLP_ENDPOINT should not suppress profile COPILOT_OTEL_ENABLED", status, msg, TelemetryEnabled)
+	}
+}
+
 func clearCopilotEnv(t *testing.T) {
 	t.Helper()
 	for _, key := range []string{

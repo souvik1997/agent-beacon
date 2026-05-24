@@ -50,9 +50,16 @@ func copilotStatus(path string, expectedEndpoint ...string) (TelemetryStatus, st
 		}
 		return TelemetryMissing, err.Error()
 	}
-	env := copilotEnvFromProcess()
-	if !env.configured() {
-		env = copilotEnvFromProfile(string(data))
+	env := copilotEnvFromProfile(string(data))
+	procEnv := copilotEnvFromProcess()
+	if procEnv.enabled != "" {
+		env.enabled = procEnv.enabled
+	}
+	if procEnv.endpoint != "" {
+		env.endpoint = procEnv.endpoint
+	}
+	if procEnv.fileExporter != "" {
+		env.fileExporter = procEnv.fileExporter
 	}
 	return copilotStatusFromEnv(env, firstNonEmptyString(expectedEndpoint...))
 }
