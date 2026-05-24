@@ -505,6 +505,11 @@ func TestConsumeMetricsDropsCopilotOperationalMetricsByDefault(t *testing.T) {
 	for _, name := range []string{
 		"gen_ai.client.operation.duration",
 		"gen_ai.client.token.usage",
+		"github.copilot.mcp.server.connection.count",
+		"github.copilot.agent.turn.count",
+		"github.copilot.tool.call.duration",
+		"github.copilot.tool.call.count",
+		"github.copilot.new.internal.metric",
 		"copilot_chat.tool.call.count",
 		"copilot_chat.agent.invocation.duration",
 	} {
@@ -519,7 +524,15 @@ func TestConsumeMetricsDropsCopilotOperationalMetricsByDefault(t *testing.T) {
 		t.Fatalf("read runtime log: %v", err)
 	}
 	text := strings.TrimSpace(string(data))
-	for _, dropped := range []string{"copilot_chat.tool.call.count", "copilot_chat.agent.invocation.duration"} {
+	for _, dropped := range []string{
+		"github.copilot.mcp.server.connection.count",
+		"github.copilot.agent.turn.count",
+		"github.copilot.tool.call.duration",
+		"github.copilot.tool.call.count",
+		"github.copilot.new.internal.metric",
+		"copilot_chat.tool.call.count",
+		"copilot_chat.agent.invocation.duration",
+	} {
 		if strings.Contains(text, dropped) {
 			t.Fatalf("Copilot operational metric %q should have been dropped, wrote: %s", dropped, text)
 		}
@@ -548,8 +561,13 @@ func TestConsumeMetricsIncludesCopilotOperationalMetricsWhenConfigured(t *testin
 	metrics := pmetric.NewMetrics()
 	rm := metrics.ResourceMetrics().AppendEmpty()
 	rm.Resource().Attributes().PutStr("service.name", "github-copilot")
-	metric := rm.ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
-	metric.SetName("copilot_chat.tool.call.count")
+	sm := rm.ScopeMetrics().AppendEmpty()
+	for _, name := range []string{
+		"github.copilot.tool.call.count",
+		"copilot_chat.tool.call.count",
+	} {
+		sm.Metrics().AppendEmpty().SetName(name)
+	}
 
 	if err := exp.consumeMetrics(context.Background(), metrics); err != nil {
 		t.Fatalf("consumeMetrics returned error: %v", err)
@@ -558,8 +576,10 @@ func TestConsumeMetricsIncludesCopilotOperationalMetricsWhenConfigured(t *testin
 	if err != nil {
 		t.Fatalf("read runtime log: %v", err)
 	}
-	if !strings.Contains(string(data), "copilot_chat.tool.call.count") {
-		t.Fatalf("Copilot operational metric should have been kept: %s", string(data))
+	for _, kept := range []string{"github.copilot.tool.call.count", "copilot_chat.tool.call.count"} {
+		if !strings.Contains(string(data), kept) {
+			t.Fatalf("Copilot operational metric %q should have been kept: %s", kept, string(data))
+		}
 	}
 }
 
