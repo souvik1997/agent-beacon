@@ -247,10 +247,10 @@ func shouldDropCopilotMetric(resourceAttrs map[string]interface{}, name string, 
 		return false
 	}
 	normalized := strings.ToLower(strings.TrimSpace(name))
-	if slices.Contains(copilotKeptMetricNames, normalized) {
+	if normalized == "" {
 		return false
 	}
-	return strings.HasPrefix(normalized, "copilot_chat.")
+	return !slices.Contains(copilotKeptMetricNames, normalized)
 }
 
 var copilotKeptMetricNames = []string{
