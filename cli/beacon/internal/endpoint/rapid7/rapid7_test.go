@@ -79,7 +79,8 @@ func TestVectorConfigUsesRapid7WebhookAndPreservesJSONShape(t *testing.T) {
 		`read_from = "end"`,
 		`. = parse_json!(.message)`,
 		`uri = "${RAPID7_WEBHOOK_URL}"`,
-		`codec = "ndjson"`,
+		`codec = "json"`,
+		`method = "newline_delimited"`,
 		`retry_attempts = 10`,
 		`Content-Type = "application/x-ndjson"`,
 	} {

@@ -25,7 +25,10 @@ uri = "${SUMO_URL}"
 method = "post"
 
 [sinks.sumo_http_logs.encoding]
-codec = "ndjson"
+codec = "json"
+
+[sinks.sumo_http_logs.framing]
+method = "newline_delimited"
 
 [sinks.sumo_http_logs.batch]
 max_events = 500
@@ -36,7 +39,7 @@ retry_attempts = 10
 retry_initial_backoff_secs = 1
 retry_max_duration_secs = 300
 
-[sinks.sumo_http_logs.headers]
+[sinks.sumo_http_logs.request.headers]
 X-Sumo-Category = "${SUMO_SOURCE_CATEGORY:-security/agentbeacon}"
 X-Sumo-Fields = "${SUMO_FIELDS:-product=agentbeacon,telemetry=ai_agent,env=prod}"
 x-sumo-token = "${SUMO_TOKEN:-}"
