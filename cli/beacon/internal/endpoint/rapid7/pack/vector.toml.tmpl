@@ -24,7 +24,10 @@ uri = "${RAPID7_WEBHOOK_URL}"
 method = "post"
 
 [sinks.rapid7_custom_logs.encoding]
-codec = "ndjson"
+codec = "json"
+
+[sinks.rapid7_custom_logs.framing]
+method = "newline_delimited"
 
 [sinks.rapid7_custom_logs.batch]
 max_events = 500
@@ -35,5 +38,5 @@ retry_attempts = 10
 retry_initial_backoff_secs = 1
 retry_max_duration_secs = 300
 
-[sinks.rapid7_custom_logs.headers]
+[sinks.rapid7_custom_logs.request.headers]
 Content-Type = "application/x-ndjson"
