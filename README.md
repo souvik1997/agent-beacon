@@ -75,17 +75,17 @@ Claude Cowork, OpenClaw).
 
 | Agent Harness | Support path |
 | --- | --- |
-| Claude Code | Local OpenTelemetry configuration |
-| Codex CLI | Local OpenTelemetry configuration |
-| Gemini CLI | Opt-in local OpenTelemetry configuration |
-| GitHub Copilot CLI | MDM-managed OpenTelemetry (OTLP HTTP) |
-| Grok Build | Beacon hook adapter |
-| OpenCode | Beacon hook adapter |
-| Devin | Beacon hook adapter |
-| Factory Droid | Local OpenTelemetry configuration and optional hook adapter |
-| Claude Cowork | Admin-configured OpenTelemetry setup |
-| OpenClaw Gateway | Gateway-configured OTLP/HTTP export |
-| Cursor | Beacon hook adapter |
+| [Claude Code](https://docs.asymptotelabs.ai/cli/supported-runtimes-claude-code) | Local OpenTelemetry configuration |
+| [Codex CLI](https://docs.asymptotelabs.ai/cli/supported-runtimes-codex-cli) | Local OpenTelemetry configuration |
+| [Gemini CLI](https://docs.asymptotelabs.ai/cli/supported-runtimes-gemini-cli) | Opt-in local OpenTelemetry configuration |
+| [GitHub Copilot CLI](https://docs.asymptotelabs.ai/cli/supported-runtimes-github-copilot-cli) | MDM-managed OpenTelemetry (OTLP HTTP) |
+| [Grok Build](https://docs.asymptotelabs.ai/cli/supported-runtimes-grok-build) | Beacon hook adapter |
+| [OpenCode](https://docs.asymptotelabs.ai/cli/supported-runtimes-opencode) | Beacon hook adapter |
+| [Devin](https://docs.asymptotelabs.ai/cli/supported-runtimes-devin) | Beacon hook adapter |
+| [Factory Droid](https://docs.asymptotelabs.ai/cli/supported-runtimes-factory-droid) | Local OpenTelemetry configuration and optional hook adapter |
+| [Claude Cowork](https://docs.asymptotelabs.ai/cli/supported-runtimes-claude-cowork) | Admin-configured OpenTelemetry setup |
+| [OpenClaw Gateway](https://docs.asymptotelabs.ai/cli/supported-runtimes-openclaw-gateway) | Gateway-configured OTLP/HTTP export |
+| [Cursor](https://docs.asymptotelabs.ai/cli/supported-runtimes-cursor) | Beacon hook adapter |
 
 ### SIEM / Output Destinations
 
@@ -94,14 +94,14 @@ enterprise-grade SIEMs.
 
 | SIEMs | Support path |
 | --- | --- |
-| Local JSONL | Default endpoint log and local dashboard source |
-| Wazuh | Localfile configuration and Beacon Wazuh content pack |
-| Elastic | Filebeat or Elastic Agent content pack over local JSONL |
-| Datadog | Datadog Agent custom log collection over local JSONL |
-| Sumo Logic | HTTP Logs & Metrics Source content pack over local JSONL |
-| Rapid7 InsightIDR | Custom Logs webhook content pack over local JSONL |
-| Splunk HEC | Optional endpoint forwarding during install or repair |
-| Customer-managed SIEM pipelines | Forwarding from local Beacon JSONL under customer control |
+| [Local JSONL](https://docs.asymptotelabs.ai/cli/local-testing-logs) | Default endpoint log and local dashboard source |
+| [Wazuh](https://docs.asymptotelabs.ai/cli/siem-forwarding-wazuh) | Localfile configuration and Beacon Wazuh content pack |
+| [Elastic](https://docs.asymptotelabs.ai/cli/siem-forwarding-elastic) | Filebeat or Elastic Agent content pack over local JSONL |
+| [Datadog](https://docs.asymptotelabs.ai/cli/siem-forwarding-datadog) | Datadog Agent custom log collection over local JSONL |
+| [Sumo Logic](https://docs.asymptotelabs.ai/cli/siem-forwarding-sumo) | HTTP Logs & Metrics Source content pack over local JSONL |
+| [Rapid7 InsightIDR](https://docs.asymptotelabs.ai/cli/siem-forwarding-rapid7) | Custom Logs webhook content pack over local JSONL |
+| [Splunk HEC](https://docs.asymptotelabs.ai/cli/siem-forwarding-splunk) | Optional endpoint forwarding during install or repair |
+| [Customer-managed SIEM pipelines](https://docs.asymptotelabs.ai/cli/siem-forwarding) | Forwarding from local Beacon JSONL under customer control |
 
 ### MDM Deployment
 
@@ -110,8 +110,8 @@ through standard MDM workflows.
 
 | MDM platform | Support path |
 | --- | --- |
-| Jamf Pro | macOS package, policy scripts, validation, and Extension Attributes |
-| Fleet | macOS package and user-context deployment helpers |
+| [Jamf Pro](https://docs.asymptotelabs.ai/cli/jamf) | macOS package, policy scripts, validation, and Extension Attributes |
+| [Fleet](https://docs.asymptotelabs.ai/cli/fleet) | macOS package and user-context deployment helpers |
 
 ## Dashboard
 
