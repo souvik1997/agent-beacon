@@ -21,7 +21,7 @@ func Files() []siempack.File {
 		{Name: "README.md", Content: mustRead("pack/README.md")},
 		{Name: "dcr-transform.kql", Content: DCRTransform()},
 		{Name: "table-schema.json", Content: mustRead("pack/table-schema.json")},
-		{Name: "dcr-template.json", Content: renderDCRTemplate(), TemplateLogPath: true},
+		{Name: "dcr-template.json", Content: renderDCRTemplate(), TemplateLogPath: true, JSONEscape: true},
 		{Name: "queries.kql", Content: mustRead("pack/queries.kql")},
 		{Name: "detections.kql", Content: mustRead("pack/detections.kql")},
 		{Name: "sample-event.jsonl", Content: mustRead("pack/sample-event.jsonl")},
@@ -44,7 +44,7 @@ func InstallPack(outputDir, logPath string) error {
 
 func renderDCRTemplate() string {
 	tmpl := mustRead("pack/dcr-template.json")
-	return strings.ReplaceAll(tmpl, "{{DCR_TRANSFORM}}", minifyKQL(DCRTransform()))
+	return strings.ReplaceAll(tmpl, "{{DCR_TRANSFORM}}", siempack.JSONEscapeForString(minifyKQL(DCRTransform())))
 }
 
 func minifyKQL(kql string) string {

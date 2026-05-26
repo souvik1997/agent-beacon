@@ -19,6 +19,7 @@ type File struct {
 	Name            string
 	Content         string
 	TemplateLogPath bool
+	JSONEscape      bool
 }
 
 func Files() []File {

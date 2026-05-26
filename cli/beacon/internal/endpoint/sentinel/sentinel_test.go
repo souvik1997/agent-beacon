@@ -54,6 +54,24 @@ func TestInstallPackWritesExpectedFiles(t *testing.T) {
 	}
 }
 
+func TestInstallPackBackslashPathProducesValidJSON(t *testing.T) {
+	dir := t.TempDir()
+	if err := InstallPack(dir, `C:\Users\me\beacon\runtime.jsonl`); err != nil {
+		t.Fatalf("InstallPack returned error: %v", err)
+	}
+	dcrTemplate, err := os.ReadFile(filepath.Join(dir, "dcr-template.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc map[string]interface{}
+	if err := json.Unmarshal(dcrTemplate, &doc); err != nil {
+		t.Fatalf("DCR template with backslash path is not valid JSON: %v\n%s", err, dcrTemplate)
+	}
+	if !strings.Contains(string(dcrTemplate), `C:\\Users\\me\\beacon\\runtime.jsonl`) {
+		t.Fatalf("DCR template missing escaped backslash path: %s", dcrTemplate)
+	}
+}
+
 func TestPackJSONFilesAreValid(t *testing.T) {
 	for _, path := range []string{
 		"pack/table-schema.json",
