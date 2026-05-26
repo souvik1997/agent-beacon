@@ -337,6 +337,42 @@ func TestRunPreToolSynthesizesAntigravityPromptFromTranscript(t *testing.T) {
 	}
 }
 
+func TestRunPreToolRetriesAntigravityPromptUntilTranscriptExists(t *testing.T) {
+	setupHookConfigDirs(t)
+	platformFlag = "antigravity"
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	t.Setenv("BEACON_ENDPOINT_LOG", logPath)
+	t.Setenv("BEACON_CONTENT_RETENTION", "full")
+	transcriptPath := filepath.Join(t.TempDir(), "transcript.jsonl")
+	input := map[string]interface{}{
+		"conversationId": "ag-session",
+		"transcriptPath": transcriptPath,
+		"workspacePaths": []interface{}{"/repo"},
+		"toolCall":       map[string]interface{}{"name": "list_dir", "args": map[string]interface{}{"DirectoryPath": `"/repo"`}},
+	}
+
+	if out := runHookWithInput(t, runPreTool, input); out["decision"] != "allow" {
+		t.Fatalf("first antigravity pre-tool response = %#v, want decision=allow", out)
+	}
+	if err := os.WriteFile(transcriptPath, []byte(`{"source":"USER_EXPLICIT","type":"USER_INPUT","content":"<USER_REQUEST>\nshow me the full prompt\n</USER_REQUEST>"}`+"\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if out := runHookWithInput(t, runPreTool, input); out["decision"] != "allow" {
+		t.Fatalf("second antigravity pre-tool response = %#v, want decision=allow", out)
+	}
+
+	events := endpointEvents(t, logPath)
+	if len(events) != 3 {
+		t.Fatalf("event count = %d, want first tool, prompt, second tool: %#v", len(events), events)
+	}
+	if action := events[1]["event"].(map[string]interface{})["action"]; action != "prompt.submitted" {
+		t.Fatalf("second event.action = %q, want prompt.submitted", action)
+	}
+	if got := events[1]["prompt"].(map[string]interface{})["text"]; got != "show me the full prompt" {
+		t.Fatalf("prompt.text = %q, want full transcript prompt", got)
+	}
+}
+
 func TestRunPermissionRequestEmitsDevinApproval(t *testing.T) {
 	setupHookConfigDirs(t)
 	platformFlag = "devin"
