@@ -140,11 +140,6 @@ func InputSnippet(logPath string) (string, error) {
 	return inputSnippetFromFS(packFS, logPath)
 }
 
-// standaloneAgentConfig returns the elastic-agent standalone config with logPath substituted.
-func standaloneAgentConfig(logPath string) (string, error) {
-	return standaloneAgentConfigFromFS(packFS, logPath)
-}
-
 // InstallPack writes the pack files to outputDir with logPath substituted.
 func InstallPack(outputDir, logPath string) error {
 	if outputDir == "" {
