@@ -173,7 +173,7 @@ func TestFiles_ContainsAllRequiredNames(t *testing.T) {
 
 func TestFilesFromFS_PropagatesReadError(t *testing.T) {
 	emptyFS := fstest.MapFS{}
-	_, err := filesFromFS(emptyFS, DefaultLogPath)
+	_, err := filesFromFS(emptyFS)
 	if err == nil {
 		t.Fatal("filesFromFS with empty FS should return an error")
 	}

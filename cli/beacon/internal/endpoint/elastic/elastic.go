@@ -158,22 +158,7 @@ func InstallPack(outputDir, logPath string) error {
 		return err
 	}
 	for _, file := range files {
-		content := file.Content
-		switch file.Name {
-		case "filebeat.yml":
-			s, err := InputSnippet(logPath)
-			if err != nil {
-				return err
-			}
-			content = s
-		case "elastic-agent-standalone.yml":
-			s, err := standaloneAgentConfig(logPath)
-			if err != nil {
-				return err
-			}
-			content = s
-		}
-		if err := os.WriteFile(filepath.Join(outputDir, file.Name), []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(outputDir, file.Name), []byte(file.Content), 0644); err != nil {
 			return err
 		}
 	}

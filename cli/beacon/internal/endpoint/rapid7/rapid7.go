@@ -55,8 +55,9 @@ func uploadSmokeTestFromFS(fsys fs.FS, logPath string) (string, error) {
 }
 
 // filesFromFS builds the full file list from the supplied FS, propagating any
-// read errors instead of panicking.
-func filesFromFS(fsys fs.FS, logPath string) ([]File, error) {
+// read errors instead of panicking. Template substitution of LOG_PATH is
+// deferred to siempack.Install via the TemplateLogPath field.
+func filesFromFS(fsys fs.FS) ([]File, error) {
 	readme, err := siempack.ReadFile(fsys, "pack/README.md")
 	if err != nil {
 		return nil, fmt.Errorf("rapid7 pack asset %q: %w", "pack/README.md", err)
@@ -83,7 +84,7 @@ func filesFromFS(fsys fs.FS, logPath string) ([]File, error) {
 
 // Files returns all pack files, propagating any embedded asset read error.
 func Files() ([]File, error) {
-	return filesFromFS(packFS, DefaultLogPath)
+	return filesFromFS(packFS)
 }
 
 // UploadSmokeTest returns the Rapid7 upload smoke-test script with logPath substituted.
@@ -99,7 +100,7 @@ func InstallPack(outputDir, logPath string) error {
 	if logPath == "" {
 		logPath = DefaultLogPath
 	}
-	files, err := filesFromFS(packFS, logPath)
+	files, err := filesFromFS(packFS)
 	if err != nil {
 		return err
 	}
