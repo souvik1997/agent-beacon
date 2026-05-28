@@ -238,6 +238,84 @@ func TestRunPostToolEmitsFactoryFileModifiedEvent(t *testing.T) {
 	}
 }
 
+func TestRunPostToolEmitsClaudeToolEvents(t *testing.T) {
+	setupHookConfigDirs(t)
+	platformFlag = "claude"
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	t.Setenv("BEACON_ENDPOINT_LOG", logPath)
+
+	inputs := []map[string]interface{}{
+		{
+			"session_id":      "claude-session",
+			"cwd":             "/repo",
+			"hook_event_name": "PostToolUse",
+			"tool_name":       "Edit",
+			"tool_input": map[string]interface{}{
+				"file_path":  "/repo/main.go",
+				"old_string": "old",
+				"new_string": "new token=claude-secret",
+			},
+			"tool_response": map[string]interface{}{"success": true},
+		},
+		{
+			"session_id":      "claude-session",
+			"cwd":             "/repo",
+			"hook_event_name": "PostToolUse",
+			"tool_name":       "Bash",
+			"tool_input":      map[string]interface{}{"command": "go test ./..."},
+			"tool_response":   map[string]interface{}{"stdout": "ok"},
+		},
+		{
+			"session_id":      "claude-session",
+			"cwd":             "/repo",
+			"hook_event_name": "PostToolUseFailure",
+			"tool_name":       "Bash",
+			"tool_input":      map[string]interface{}{"command": "go test ./..."},
+			"error":           "exit status 1",
+		},
+		{
+			"session_id":      "claude-session",
+			"cwd":             "/repo",
+			"hook_event_name": "PostToolUse",
+			"tool_name":       "mcp__memory__write",
+			"tool_input":      map[string]interface{}{"name": "remember"},
+			"tool_response":   map[string]interface{}{"ok": true},
+		},
+	}
+
+	for _, input := range inputs {
+		if out := runHookWithInput(t, runPostTool, input); len(out) != 0 {
+			t.Fatalf("post-tool response = %#v, want empty response", out)
+		}
+	}
+
+	events := endpointEvents(t, logPath)
+	if len(events) != 4 {
+		t.Fatalf("event count = %d, want 4: %#v", len(events), events)
+	}
+	wantActions := []string{"file.modified", "command.executed", "tool.failed", "mcp.tool_invoked"}
+	for i, want := range wantActions {
+		if got := events[i]["event"].(map[string]interface{})["action"]; got != want {
+			t.Fatalf("event[%d].action = %q, want %q", i, got, want)
+		}
+		if harness := events[i]["harness"].(map[string]interface{})["name"]; harness != "claude" {
+			t.Fatalf("event[%d] harness = %q, want claude", i, harness)
+		}
+	}
+	if file := events[0]["file"].(map[string]interface{}); file["path"] != "/repo/main.go" || file["operation"] != "modify" {
+		t.Fatalf("file event = %#v, want main.go modify", file)
+	}
+	if command := events[1]["command"].(map[string]interface{})["command"]; command != "go test ./..." {
+		t.Fatalf("command = %q, want go test ./...", command)
+	}
+	if severity := events[2]["severity"]; severity != "high" {
+		t.Fatalf("failure severity = %q, want high", severity)
+	}
+	if mcp := events[3]["mcp"].(map[string]interface{}); mcp["tool"] != "remember" {
+		t.Fatalf("mcp = %#v, want tool remember", mcp)
+	}
+}
+
 func TestResolveToolInput(t *testing.T) {
 	tests := []struct {
 		name  string

@@ -1,7 +1,6 @@
 package hooks
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,21 +19,9 @@ type FactoryStatus struct {
 	Message      string `json:"message,omitempty"`
 }
 
-type factoryHookGroup struct {
-	Matcher string           `json:"matcher,omitempty"`
-	Hooks   []factoryHookRef `json:"hooks"`
-}
-
-type factoryHookRef struct {
-	Type    string `json:"type"`
-	Command string `json:"command"`
-	Timeout int    `json:"timeout,omitempty"`
-}
-
-type factorySettings struct {
-	values map[string]json.RawMessage
-	hooks  map[string][]factoryHookGroup
-}
+type factoryHookGroup = settingsHookGroup
+type factoryHookRef = settingsHookRef
+type factorySettings = settingsHooksFile
 
 var factoryRuntime = hookRuntime{
 	displayName: "Factory",
@@ -78,10 +65,6 @@ func factoryStatusFromRuntime(status runtimeStatus) FactoryStatus {
 }
 
 func installFactorySettings(path, binaryPath, logPath, configPath string) error {
-	settings, err := readFactorySettings(path)
-	if err != nil {
-		return err
-	}
 	prefix := endpointCommandPrefix("factory", binaryPath, logPath, configPath)
 	endpointHooks := map[string]factoryHookGroup{
 		"SessionStart":     {Hooks: []factoryHookRef{{Type: "command", Command: prefix + " session-start"}}},
@@ -90,144 +73,19 @@ func installFactorySettings(path, binaryPath, logPath, configPath string) error 
 		"Stop":             {Hooks: []factoryHookRef{{Type: "command", Command: prefix + " stop", Timeout: 45}}},
 		"SessionEnd":       {Hooks: []factoryHookRef{{Type: "command", Command: prefix + " session-end"}}},
 	}
-	for eventName, group := range endpointHooks {
-		settings.hooks[eventName] = mergeFactoryEndpointHook(settings.hooks[eventName], group)
-	}
-	data, err := settings.marshal()
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0600)
+	return installSettingsEndpointHooks(path, "factory", endpointHooks)
 }
 
 func readFactorySettings(path string) (factorySettings, error) {
-	settings := factorySettings{
-		values: map[string]json.RawMessage{},
-		hooks:  map[string][]factoryHookGroup{},
-	}
-	data, err := os.ReadFile(path)
-	if err == nil {
-		if err := json.Unmarshal(data, &settings.values); err != nil {
-			return factorySettings{}, err
-		}
-		if rawHooks, ok := settings.values["hooks"]; ok {
-			if err := json.Unmarshal(rawHooks, &settings.hooks); err != nil {
-				return factorySettings{}, err
-			}
-		}
-	} else if !os.IsNotExist(err) {
-		return factorySettings{}, err
-	}
-	if settings.hooks == nil {
-		settings.hooks = map[string][]factoryHookGroup{}
-	}
-	return settings, nil
-}
-
-func (settings factorySettings) marshal() ([]byte, error) {
-	out := make(map[string]json.RawMessage, len(settings.values)+1)
-	for key, value := range settings.values {
-		if key != "hooks" {
-			out[key] = value
-		}
-	}
-	if len(settings.hooks) > 0 {
-		data, err := json.Marshal(settings.hooks)
-		if err != nil {
-			return nil, err
-		}
-		out["hooks"] = data
-	}
-	return json.MarshalIndent(out, "", "  ")
-}
-
-func mergeFactoryEndpointHook(existing []factoryHookGroup, group factoryHookGroup) []factoryHookGroup {
-	out := make([]factoryHookGroup, 0, len(existing)+1)
-	for _, item := range existing {
-		filtered, changed := filterFactoryEndpointHooks(item)
-		if !changed || len(filtered.Hooks) > 0 {
-			out = append(out, item)
-			if changed {
-				out[len(out)-1] = filtered
-			}
-		}
-	}
-	return append(out, group)
+	return readSettingsHooks(path)
 }
 
 func removeFactoryEndpointHooks(path string) (bool, error) {
-	settings, err := readFactorySettings(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	changed := false
-	for eventName, groups := range settings.hooks {
-		filtered := groups[:0]
-		for _, group := range groups {
-			withoutEndpointHooks, groupChanged := filterFactoryEndpointHooks(group)
-			if groupChanged {
-				changed = true
-			}
-			if len(withoutEndpointHooks.Hooks) == 0 {
-				continue
-			}
-			filtered = append(filtered, withoutEndpointHooks)
-		}
-		if len(filtered) == 0 {
-			delete(settings.hooks, eventName)
-		} else {
-			settings.hooks[eventName] = filtered
-		}
-	}
-	if !changed {
-		return false, nil
-	}
-	out, err := settings.marshal()
-	if err != nil {
-		return false, err
-	}
-	return true, os.WriteFile(path, out, 0600)
-}
-
-func isFactoryEndpointHookGroup(group factoryHookGroup) bool {
-	for _, hook := range group.Hooks {
-		if isEndpointHookCommand(hook.Command, "factory") {
-			return true
-		}
-	}
-	return false
-}
-
-func filterFactoryEndpointHooks(group factoryHookGroup) (factoryHookGroup, bool) {
-	filtered := group
-	filtered.Hooks = group.Hooks[:0]
-	changed := false
-	for _, hook := range group.Hooks {
-		if isEndpointHookCommand(hook.Command, "factory") {
-			changed = true
-			continue
-		}
-		filtered.Hooks = append(filtered.Hooks, hook)
-	}
-	return filtered, changed
+	return removeSettingsEndpointHooks(path, "factory")
 }
 
 func isFactoryInstalledAt(path string) bool {
-	settings, err := readFactorySettings(path)
-	if err != nil {
-		return false
-	}
-	for _, groups := range settings.hooks {
-		for _, group := range groups {
-			if isFactoryEndpointHookGroup(group) {
-				return true
-			}
-		}
-	}
-	return false
+	return isSettingsEndpointInstalledAt(path, "factory")
 }
 
 func factorySettingsPath(level Level) (string, error) {
