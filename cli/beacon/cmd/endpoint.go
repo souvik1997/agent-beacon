@@ -875,6 +875,16 @@ func runEndpointHooksInstall(cmd *cobra.Command, args []string) error {
 				return err
 			}
 			fmt.Printf("Cursor hooks installed: %s\n", status.HooksJSONPath)
+		case "claude", "claude_code":
+			status, err := endpointhooks.InstallClaude(endpointhooks.ClaudeOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Claude Code hooks installed: %s\n", status.SettingsPath)
 		case "vscode", "vs_code":
 			status, err := endpointhooks.InstallVSCode(endpointhooks.VSCodeOptions{
 				Level:    endpointhooks.Level(endpointOpts.hookLevel),
@@ -967,6 +977,16 @@ func runEndpointHooksUninstall(cmd *cobra.Command, args []string) error {
 				return err
 			}
 			fmt.Println(status.Message)
+		case "claude", "claude_code":
+			status, err := endpointhooks.UninstallClaude(endpointhooks.ClaudeOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+			if err != nil {
+				return err
+			}
+			fmt.Println(status.Message)
 		case "vscode", "vs_code":
 			status, err := endpointhooks.UninstallVSCode(endpointhooks.VSCodeOptions{
 				Level:    endpointhooks.Level(endpointOpts.hookLevel),
@@ -1042,6 +1062,12 @@ func runEndpointHooksStatus(cmd *cobra.Command, args []string) error {
 				LogPath:  cfg.LogPath,
 				UserMode: cfg.UserMode,
 			})
+		case "claude", "claude_code":
+			statuses["claude"] = endpointhooks.ClaudeHookStatus(endpointhooks.ClaudeOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
 		case "vscode", "vs_code":
 			statuses["vscode"] = endpointhooks.VSCodeHookStatus(endpointhooks.VSCodeOptions{
 				Level:    endpointhooks.Level(endpointOpts.hookLevel),
@@ -1089,6 +1115,10 @@ func runEndpointHooksStatus(cmd *cobra.Command, args []string) error {
 		case "cursor":
 			status := statuses["cursor"].(endpointhooks.CursorStatus)
 			fmt.Printf("Cursor hooks: installed=%t path=%s\n", status.Installed, status.HooksJSONPath)
+			fmt.Println(status.Message)
+		case "claude", "claude_code":
+			status := statuses["claude"].(endpointhooks.ClaudeStatus)
+			fmt.Printf("Claude Code hooks: installed=%t path=%s\n", status.Installed, status.SettingsPath)
 			fmt.Println(status.Message)
 		case "vscode", "vs_code":
 			status := statuses["vscode"].(endpointhooks.VSCodeStatus)

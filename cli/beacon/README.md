@@ -123,6 +123,9 @@ tooling, not in Beacon endpoint configuration.
 ./beacon endpoint hooks install --harness cursor
 ./beacon endpoint hooks status --harness cursor
 
+./beacon endpoint hooks install --harness claude --level user
+./beacon endpoint hooks status --harness claude
+
 ./beacon endpoint hooks install --harness opencode
 ./beacon endpoint hooks status --harness opencode
 
@@ -152,6 +155,15 @@ raw opencode hook payloads to Beacon's Go hook binary; Beacon handles
 normalization, retention, redaction, and JSONL output locally. For local
 troubleshooting, set `BEACON_OPENCODE_DEBUG=1` in the environment that launches
 opencode to emit best-effort plugin debug logs.
+
+Claude Code supports two Beacon setup paths. `beacon endpoint install --harness claude`
+configures Claude Code's local OpenTelemetry export to Beacon's collector.
+`beacon endpoint hooks install --harness claude` writes command hooks into
+`~/.claude/settings.json` or `.claude/settings.json` and sends normalized events
+directly to the local runtime JSONL log. The hook path is useful when an
+Anthropic organization policy blocks third-party telemetry export. Claude Code
+hooks are intentionally not included in `beacon endpoint hooks install --all` in
+this release; install them explicitly with `--harness claude`.
 
 The Grok Build integration writes Beacon's owned local hook file at
 `~/.grok/hooks/beacon-endpoint.json` for user-level installs or `.grok/hooks/beacon-endpoint.json`

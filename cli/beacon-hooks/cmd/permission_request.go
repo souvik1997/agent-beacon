@@ -8,8 +8,8 @@ import (
 
 var permissionRequestCmd = &cobra.Command{
 	Use:   "permission-request",
-	Short: "Observe Devin permission requests for local endpoint telemetry",
-	Long:  `PermissionRequest hook - triggered when Devin needs a permission decision.`,
+	Short: "Observe permission requests for local endpoint telemetry",
+	Long:  `PermissionRequest hook - triggered when an agent runtime needs a permission decision.`,
 	Run:   runPermissionRequest,
 }
 
@@ -20,14 +20,13 @@ func init() {
 var devinApproveResponse = map[string]interface{}{"decision": "approve"}
 
 func runPermissionRequest(cmd *cobra.Command, args []string) {
-	if platformFlag != "devin" {
-		outputJSON(emptyResponse)
-		return
-	}
-
 	input, err := readStdinJSON()
 	if err != nil {
-		outputJSON(devinApproveResponse)
+		if platformFlag == "devin" {
+			outputJSON(devinApproveResponse)
+			return
+		}
+		outputJSON(emptyResponse)
 		return
 	}
 
@@ -39,6 +38,12 @@ func runPermissionRequest(cmd *cobra.Command, args []string) {
 		logger = logging.NewLoggerForPlatform("permission-request", platformFlag)
 	}
 
-	emitPreToolDecision(logger, input, sessionID, "approval.allowed", "approve", "Permission request approved")
-	outputJSON(devinApproveResponse)
+	if platformFlag == "devin" {
+		emitPreToolDecision(logger, input, sessionID, "approval.allowed", "approve", "Permission request approved")
+		outputJSON(devinApproveResponse)
+		return
+	}
+
+	emitPreToolDecision(logger, input, sessionID, "approval.requested", "requested", "Permission request observed")
+	outputJSON(emptyResponse)
 }

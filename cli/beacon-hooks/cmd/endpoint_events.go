@@ -184,7 +184,7 @@ func actionForTool(hookEvent, toolName string) string {
 	switch {
 	case strings.Contains(lower, "mcp"):
 		return "mcp.tool_invoked"
-	case strings.Contains(lower, "shell") || strings.Contains(lower, "terminal") || strings.Contains(lower, "command"):
+	case lower == "bash" || strings.Contains(lower, "shell") || strings.Contains(lower, "terminal") || strings.Contains(lower, "command"):
 		return "command.executed"
 	case strings.Contains(lower, "read"):
 		return "file.read"

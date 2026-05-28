@@ -313,6 +313,45 @@ func TestRunPreToolEmitsDevinToolTelemetryWithoutApproval(t *testing.T) {
 	}
 }
 
+func TestRunPreToolEmitsClaudeTelemetryWithoutDecision(t *testing.T) {
+	setupHookConfigDirs(t)
+	platformFlag = "claude"
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	t.Setenv("BEACON_ENDPOINT_LOG", logPath)
+
+	out := runHookWithInput(t, runPreTool, map[string]interface{}{
+		"session_id":      "claude-session",
+		"transcript_path": "/tmp/claude-session.jsonl",
+		"cwd":             "/repo",
+		"hook_event_name": "PreToolUse",
+		"tool_name":       "Bash",
+		"tool_input": map[string]interface{}{
+			"command": "go test ./...",
+		},
+	})
+	if len(out) != 0 {
+		t.Fatalf("claude pre-tool response = %#v, want empty non-controlling response", out)
+	}
+
+	event := lastEndpointEvent(t, logPath)
+	if action := event["event"].(map[string]interface{})["action"]; action != "tool.invoked" {
+		t.Fatalf("event.action = %q, want tool.invoked", action)
+	}
+	if harness := event["harness"].(map[string]interface{})["name"]; harness != "claude" {
+		t.Fatalf("harness = %q, want claude", harness)
+	}
+	if _, ok := event["approval"]; ok {
+		t.Fatalf("Claude PreToolUse should not emit approval telemetry: %#v", event["approval"])
+	}
+	if command := event["command"].(map[string]interface{})["command"]; command != "go test ./..." {
+		t.Fatalf("command = %q, want go test ./...", command)
+	}
+	session := event["session"].(map[string]interface{})
+	if session["id"] != "claude-session" || session["working_directory"] != "/repo" {
+		t.Fatalf("session = %#v, want id and working_directory", session)
+	}
+}
+
 func TestRunPreToolEmitsAntigravityCommandTelemetry(t *testing.T) {
 	setupHookConfigDirs(t)
 	platformFlag = "antigravity"
@@ -461,23 +500,33 @@ func TestRunPermissionRequestEmitsDevinApproval(t *testing.T) {
 	}
 }
 
-func TestRunPermissionRequestNoopsForNonDevinPlatform(t *testing.T) {
+func TestRunPermissionRequestEmitsClaudeTelemetryWithoutDecision(t *testing.T) {
 	setupHookConfigDirs(t)
-	platformFlag = "cursor"
+	platformFlag = "claude"
 	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
 	t.Setenv("BEACON_ENDPOINT_LOG", logPath)
 
 	out := runHookWithInput(t, runPermissionRequest, map[string]interface{}{
+		"session_id":      "claude-session",
+		"cwd":             "/repo",
 		"hook_event_name": "PermissionRequest",
-		"tool_name":       "Shell",
+		"tool_name":       "Bash",
+		"tool_input":      map[string]interface{}{"command": "git status"},
 	})
 	if len(out) != 0 {
-		t.Fatalf("non-Devin permission response = %#v, want empty response", out)
+		t.Fatalf("claude permission response = %#v, want empty response", out)
 	}
-	if _, err := os.Stat(logPath); err == nil {
-		t.Fatalf("non-Devin permission request should not write endpoint log")
-	} else if !os.IsNotExist(err) {
-		t.Fatalf("unexpected endpoint log stat error: %v", err)
+
+	event := lastEndpointEvent(t, logPath)
+	if action := event["event"].(map[string]interface{})["action"]; action != "approval.requested" {
+		t.Fatalf("event.action = %q, want approval.requested", action)
+	}
+	approval := event["approval"].(map[string]interface{})
+	if approval["decision"] != "requested" {
+		t.Fatalf("approval = %#v, want requested", approval)
+	}
+	if command := event["command"].(map[string]interface{})["command"]; command != "git status" {
+		t.Fatalf("command = %q, want git status", command)
 	}
 }
 
