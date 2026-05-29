@@ -18,6 +18,7 @@ BEACON_NO_START=1 \
   /opt/beacon/scripts/install-endpoint.sh
 
 if command -v launchctl >/dev/null 2>&1; then
+  launchctl bootout system/com.beacon.endpoint.collector >/dev/null 2>&1 || true
   launchctl bootstrap system /Library/LaunchDaemons/com.beacon.endpoint.collector.plist >/dev/null 2>&1 || {
     launchctl print system/com.beacon.endpoint.collector >/dev/null 2>&1 || exit 1
   }
