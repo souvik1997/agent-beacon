@@ -24,7 +24,7 @@ func NewJSONLSink(path string) *JSONLSink {
 	return &JSONLSink{path: path}
 }
 
-func (s *JSONLSink) WriteBatch(ctx context.Context, events []Event) error {
+func (s *JSONLSink) WriteBatch(ctx context.Context, events []Event) (err error) {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -44,7 +44,15 @@ func (s *JSONLSink) WriteBatch(ctx context.Context, events []Event) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil {
+			if err != nil {
+				err = errors.Join(err, cerr)
+			} else {
+				err = cerr
+			}
+		}
+	}()
 
 	encoder := json.NewEncoder(f)
 	for _, event := range events {
