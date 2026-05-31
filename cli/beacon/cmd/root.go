@@ -19,7 +19,8 @@ Beacon-hosted backend.`,
 	Version: version.GetVersion(),
 	Run: func(cmd *cobra.Command, args []string) {
 		printBeaconIntro(cmd)
-		cmd.Usage()
+		cmd.SetOut(cmd.OutOrStdout())
+		_ = cmd.Usage()
 	},
 }
 
