@@ -49,12 +49,14 @@ func TestRunUpdateCheckReportsAvailableUpdate(t *testing.T) {
 		result: updatecheck.Result{
 			CurrentVersion:  "v0.0.10",
 			LatestVersion:   "v0.0.12",
+			ReleaseURL:      "https://example.test/releases/v0.0.12",
 			UpdateAvailable: true,
 		},
 	})
 	for _, want := range []string{
 		"Beacon v0.0.12 is available. Current version: v0.0.10",
-		"Upgrade with: brew upgrade beacon",
+		"Upgrade with Homebrew: brew upgrade beacon",
+		"Download: https://example.test/releases/v0.0.12",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output = %q, want %q", got, want)
@@ -68,6 +70,15 @@ func TestRunUpdateCheckReportsDevBuild(t *testing.T) {
 	})
 	if !strings.Contains(got, "Beacon dev build: update checks require a released version.") {
 		t.Fatalf("output = %q, want dev-build message", got)
+	}
+}
+
+func TestRunUpdateCheckReportsUnsupportedCurrentVersion(t *testing.T) {
+	got := runUpdateCheckWithStub(t, "v0.0.12+local", stubUpdateChecker{
+		result: updatecheck.Result{CurrentVersion: "v0.0.12+local", UnsupportedCurrentVersion: true},
+	})
+	if !strings.Contains(got, `Beacon version "v0.0.12+local" cannot be compared to released versions.`) {
+		t.Fatalf("output = %q, want unsupported-version message", got)
 	}
 }
 

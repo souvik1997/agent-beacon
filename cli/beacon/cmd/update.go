@@ -52,9 +52,16 @@ func runUpdateCheck(cmd *cobra.Command, args []string) error {
 		fmt.Fprintln(out, "Beacon dev build: update checks require a released version.")
 		return nil
 	}
+	if result.UnsupportedCurrentVersion {
+		fmt.Fprintf(out, "Beacon version %q cannot be compared to released versions.\n", result.CurrentVersion)
+		return nil
+	}
 	if result.UpdateAvailable {
 		fmt.Fprintf(out, "Beacon %s is available. Current version: %s\n", result.LatestVersion, result.CurrentVersion)
-		fmt.Fprintln(out, "Upgrade with: brew upgrade beacon")
+		fmt.Fprintln(out, "Upgrade with Homebrew: brew upgrade beacon")
+		if result.ReleaseURL != "" {
+			fmt.Fprintf(out, "Download: %s\n", result.ReleaseURL)
+		}
 		return nil
 	}
 	fmt.Fprintf(out, "Beacon %s is up to date.\n", result.CurrentVersion)
