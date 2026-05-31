@@ -25,13 +25,66 @@ func (c stubVersionChecker) Check(context.Context) (updatecheck.Result, error) {
 	return c.result, nil
 }
 
-func TestVersionCheckCommandRegistered(t *testing.T) {
-	cmd, _, err := rootCmd.Find([]string{"version", "check"})
+func TestVersionCheckFlagRegistered(t *testing.T) {
+	cmd, _, err := rootCmd.Find([]string{"version"})
 	if err != nil {
-		t.Fatalf("Find version check returned error: %v", err)
+		t.Fatalf("Find version returned error: %v", err)
 	}
-	if cmd == nil || cmd.Use != "check" {
-		t.Fatalf("version check command not registered: %#v", cmd)
+	if cmd == nil {
+		t.Fatal("version command not registered")
+	}
+	if cmd.Flags().Lookup("check") == nil {
+		t.Fatal("version command missing --check flag")
+	}
+}
+
+func TestRunVersionWithoutCheckPrintsVersionOnly(t *testing.T) {
+	restoreVersion := setVersionForTest(t, "v0.0.10")
+	defer restoreVersion()
+	restoreFlag := setVersionCheckForTest(t, false)
+	defer restoreFlag()
+	restoreChecker := setVersionCheckerForTest(t, stubVersionChecker{err: errors.New("should not run")})
+	defer restoreChecker()
+
+	cmd := &cobra.Command{}
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	if err := runVersion(cmd, nil); err != nil {
+		t.Fatalf("runVersion returned error: %v", err)
+	}
+	got := out.String()
+	if !strings.Contains(got, "beacon version v0.0.10") {
+		t.Fatalf("output = %q, want version", got)
+	}
+	if strings.Contains(got, "unable to check") {
+		t.Fatalf("output = %q, update check unexpectedly ran", got)
+	}
+}
+
+func TestRunVersionWithCheckPrintsVersionAndUpdateResult(t *testing.T) {
+	restoreVersion := setVersionForTest(t, "v0.0.10")
+	defer restoreVersion()
+	restoreFlag := setVersionCheckForTest(t, true)
+	defer restoreFlag()
+	restoreChecker := setVersionCheckerForTest(t, stubVersionChecker{
+		result: updatecheck.Result{CurrentVersion: "v0.0.10", LatestVersion: "v0.0.10"},
+	})
+	defer restoreChecker()
+
+	cmd := &cobra.Command{}
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	if err := runVersion(cmd, nil); err != nil {
+		t.Fatalf("runVersion returned error: %v", err)
+	}
+	got := out.String()
+	for _, want := range []string{
+		"beacon version v0.0.10",
+		"Beacon v0.0.10 is up to date.",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("output = %q, want %q", got, want)
+		}
 	}
 }
 
@@ -55,7 +108,7 @@ func TestRunVersionCheckReportsAvailableUpdate(t *testing.T) {
 	})
 	for _, want := range []string{
 		"Beacon v0.0.12 is available. Current version: v0.0.10",
-		"Upgrade with Homebrew: brew upgrade beacon",
+		"If installed with Homebrew: brew upgrade beacon",
 		"Download: https://example.test/releases/v0.0.12",
 	} {
 		if !strings.Contains(got, want) {
@@ -130,4 +183,11 @@ func setVersionCheckerForTest(t *testing.T, checker versionChecker) func() {
 		return checker
 	}
 	return func() { newVersionChecker = old }
+}
+
+func setVersionCheckForTest(t *testing.T, enabled bool) func() {
+	t.Helper()
+	old := versionCheck
+	versionCheck = enabled
+	return func() { versionCheck = old }
 }

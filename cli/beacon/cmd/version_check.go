@@ -16,18 +16,13 @@ type versionChecker interface {
 }
 
 var (
+	versionCheck = false
+
 	newVersionChecker = func(currentVersion string) versionChecker {
 		return updatecheck.DefaultChecker(currentVersion)
 	}
 	versionCheckTimeout = 2 * time.Second
 )
-
-var versionCheckCmd = &cobra.Command{
-	Use:          "check",
-	Short:        "Check whether a newer Beacon CLI release is available",
-	SilenceUsage: true,
-	RunE:         runVersionCheck,
-}
 
 func runVersionCheck(cmd *cobra.Command, args []string) error {
 	parent := cmd.Context()
@@ -53,7 +48,7 @@ func runVersionCheck(cmd *cobra.Command, args []string) error {
 	}
 	if result.UpdateAvailable {
 		fmt.Fprintf(out, "Beacon %s is available. Current version: %s\n", result.LatestVersion, result.CurrentVersion)
-		fmt.Fprintln(out, "Upgrade with Homebrew: brew upgrade beacon")
+		fmt.Fprintln(out, "If installed with Homebrew: brew upgrade beacon")
 		if result.ReleaseURL != "" {
 			fmt.Fprintf(out, "Download: %s\n", result.ReleaseURL)
 		}
@@ -61,8 +56,4 @@ func runVersionCheck(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Fprintf(out, "Beacon %s is up to date.\n", result.CurrentVersion)
 	return nil
-}
-
-func init() {
-	versionCmd.AddCommand(versionCheckCmd)
 }
