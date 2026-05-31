@@ -15,6 +15,13 @@ type versionChecker interface {
 	Check(context.Context) (updatecheck.Result, error)
 }
 
+var versionCheckCmd = &cobra.Command{
+	Use:          "check",
+	Short:        "Check whether a newer Beacon CLI release is available",
+	SilenceUsage: true,
+	RunE:         runVersionCheck,
+}
+
 var (
 	versionCheck = false
 
@@ -23,6 +30,10 @@ var (
 	}
 	versionCheckTimeout = 2 * time.Second
 )
+
+func init() {
+	versionCmd.AddCommand(versionCheckCmd)
+}
 
 func runVersionCheck(cmd *cobra.Command, args []string) error {
 	parent := cmd.Context()

@@ -12,7 +12,6 @@ var versionCmd = &cobra.Command{
 	Use:          "version",
 	Short:        "Display the version of the Beacon CLI",
 	Long:         `Display the version number, git commit, and build date of the Beacon CLI.`,
-	Args:         cobra.NoArgs,
 	SilenceUsage: true,
 	RunE:         runVersion,
 }

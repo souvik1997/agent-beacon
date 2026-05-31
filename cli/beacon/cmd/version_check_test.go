@@ -38,6 +38,19 @@ func TestVersionCheckFlagRegistered(t *testing.T) {
 	}
 }
 
+func TestVersionCheckSubcommandRegistered(t *testing.T) {
+	cmd, _, err := rootCmd.Find([]string{"version", "check"})
+	if err != nil {
+		t.Fatalf("Find version check returned error: %v", err)
+	}
+	if cmd == nil {
+		t.Fatal("version check subcommand not registered")
+	}
+	if cmd.Use != "check" {
+		t.Fatalf("found command Use = %q, want %q", cmd.Use, "check")
+	}
+}
+
 func TestRunVersionWithoutCheckPrintsVersionOnly(t *testing.T) {
 	restoreVersion := setVersionForTest(t, "v0.0.10")
 	defer restoreVersion()
