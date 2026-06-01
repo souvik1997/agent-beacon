@@ -16,7 +16,7 @@ func TestCICommandsRegistered(t *testing.T) {
 			t.Fatalf("command %v not registered", path)
 		}
 	}
-	for _, name := range []string{"harness", "log-path", "min-events", "require-harness", "json"} {
+	for _, name := range []string{"harness", "log-path", "min-events", "json"} {
 		if ciExecCmd.Flags().Lookup(name) == nil {
 			t.Fatalf("ci exec missing --%s", name)
 		}
@@ -24,9 +24,21 @@ func TestCICommandsRegistered(t *testing.T) {
 			t.Fatalf("ci validate missing --%s", name)
 		}
 	}
-	for _, name := range []string{"base-dir", "work-dir", "collector", "otlp-grpc-port", "otlp-http-port", "content-retention", "keep-artifacts"} {
+	for _, name := range []string{"content-retention", "keep-artifacts"} {
 		if ciExecCmd.Flags().Lookup(name) == nil {
 			t.Fatalf("ci exec missing --%s", name)
+		}
+	}
+	if ciExecCmd.Flags().Lookup("require-harness") != nil || ciValidateCmd.Flags().Lookup("require-harness") != nil {
+		t.Fatal("CI commands should not expose --require-harness")
+	}
+	for _, name := range []string{"base-dir", "work-dir", "collector", "otlp-grpc-port", "otlp-http-port"} {
+		flag := ciExecCmd.Flags().Lookup(name)
+		if flag == nil {
+			t.Fatalf("ci exec missing advanced --%s", name)
+		}
+		if !flag.Hidden {
+			t.Fatalf("ci exec --%s should be hidden", name)
 		}
 	}
 }

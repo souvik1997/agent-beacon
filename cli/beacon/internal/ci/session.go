@@ -56,9 +56,10 @@ type Session struct {
 	StartedAt       string          `json:"started_at"`
 	Run             *schema.RunInfo `json:"run,omitempty"`
 
-	cfg  endpointconfig.Config
-	cmd  *exec.Cmd
-	done chan error
+	cfg       endpointconfig.Config
+	startedAt time.Time
+	cmd       *exec.Cmd
+	done      chan error
 }
 
 type ExecResult struct {
@@ -78,7 +79,7 @@ func Provision(opts Options) (*Session, error) {
 	if err := endpointconfig.ValidateContentRetention(opts.ContentRetention); err != nil {
 		return nil, err
 	}
-	baseDir, err := resolveBaseDir(opts.BaseDir)
+	baseDir, err := resolveBaseDir(opts.BaseDir, opts.LogPath)
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +133,7 @@ func Provision(opts Options) (*Session, error) {
 		StartedAt:       startedAt.Format(time.RFC3339),
 		Run:             detectRunInfo(),
 		cfg:             cfg,
+		startedAt:       startedAt,
 	}, nil
 }
 
@@ -218,6 +220,17 @@ func (s *Session) Config() endpointconfig.Config {
 	return s.cfg
 }
 
+func (s *Session) StartedAtTime() time.Time {
+	if s == nil {
+		return time.Time{}
+	}
+	if !s.startedAt.IsZero() {
+		return s.startedAt
+	}
+	startedAt, _ := time.Parse(time.RFC3339, s.StartedAt)
+	return startedAt
+}
+
 func validateHarness(harness string) error {
 	harness = strings.TrimSpace(harness)
 	if harness == "" || harness == DefaultHarness || harness == "claude_code" {
@@ -226,12 +239,19 @@ func validateHarness(harness string) error {
 	return fmt.Errorf("unsupported CI harness %q; only claude is supported", harness)
 }
 
-func resolveBaseDir(configured string) (string, error) {
+func resolveBaseDir(configured, logPath string) (string, error) {
 	if strings.TrimSpace(configured) != "" {
 		if err := os.MkdirAll(configured, 0755); err != nil {
 			return "", err
 		}
 		return filepath.Abs(configured)
+	}
+	if strings.TrimSpace(logPath) != "" {
+		base := filepath.Dir(logPath)
+		if err := os.MkdirAll(base, 0755); err != nil {
+			return "", err
+		}
+		return filepath.Abs(base)
 	}
 	if runnerTemp := strings.TrimSpace(os.Getenv("RUNNER_TEMP")); runnerTemp != "" {
 		base := filepath.Join(runnerTemp, "beacon")

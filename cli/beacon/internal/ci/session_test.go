@@ -44,6 +44,26 @@ func TestProvisionUsesRunnerTempAndWritesCollectorConfig(t *testing.T) {
 	}
 }
 
+func TestProvisionUsesLogPathDirectoryAsBaseDir(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "artifacts", "runtime.jsonl")
+	collector := fakeExecutable(t, "collector", "#!/bin/sh\nsleep 60\n")
+	oldResolve := resolveCollectorBinary
+	resolveCollectorBinary = func(string) (string, error) { return collector, nil }
+	t.Cleanup(func() { resolveCollectorBinary = oldResolve })
+
+	session, err := Provision(Options{CollectorPath: collector, LogPath: logPath, Harness: "claude"})
+	if err != nil {
+		t.Fatalf("Provision returned error: %v", err)
+	}
+	if want := filepath.Dir(logPath); session.BaseDir != want {
+		t.Fatalf("BaseDir = %q, want %q", session.BaseDir, want)
+	}
+	if session.ConfigPath != filepath.Join(filepath.Dir(logPath), "otelcol.yaml") {
+		t.Fatalf("ConfigPath = %q", session.ConfigPath)
+	}
+}
+
 func TestProvisionRejectsUnsupportedHarness(t *testing.T) {
 	if _, err := Provision(Options{Harness: "codex"}); err == nil {
 		t.Fatal("Provision accepted unsupported harness")

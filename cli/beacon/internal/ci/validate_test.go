@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/schema"
 )
@@ -47,6 +48,27 @@ func TestValidateFailsWhenHarnessEventMissing(t *testing.T) {
 	result := Validate(ValidationOptions{LogPath: path, MinEvents: 1, RequireHarness: "claude"})
 	if result.Status != "fail" {
 		t.Fatalf("Validate status = %q, want fail", result.Status)
+	}
+	if result.EventCount != 0 {
+		t.Fatalf("EventCount = %d, want 0", result.EventCount)
+	}
+}
+
+func TestValidateFiltersEventsBeforeSince(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	event := NewSessionEvent("ci.test", "test event", nil)
+	event.Harness.Name = "claude_code"
+	event.Timestamp = time.Now().Add(-1 * time.Hour).UTC().Format(time.RFC3339)
+	writeEventLine(t, path, event)
+
+	result := Validate(ValidationOptions{
+		LogPath:        path,
+		MinEvents:      1,
+		RequireHarness: "claude",
+		Since:          time.Now().Add(-1 * time.Minute),
+	})
+	if result.Status != "fail" {
+		t.Fatalf("Validate status = %q, want fail for stale event", result.Status)
 	}
 	if result.EventCount != 0 {
 		t.Fatalf("EventCount = %d, want 0", result.EventCount)

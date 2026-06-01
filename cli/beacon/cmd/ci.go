@@ -27,7 +27,6 @@ var ciOpts struct {
 	jsonOutput       bool
 	keepArtifacts    bool
 	minEvents        int
-	requireHarness   string
 }
 
 var ciCmd = &cobra.Command{
@@ -38,7 +37,7 @@ persistent endpoint service or modifying user harness configuration.`,
 }
 
 var ciExecCmd = &cobra.Command{
-	Use:          "exec --harness claude -- <command> [args...]",
+	Use:          "exec [--harness claude] -- <command> [args...]",
 	Short:        "Run a command with Claude Code telemetry captured for CI",
 	Args:         cobra.MinimumNArgs(1),
 	SilenceUsage: true,
@@ -61,7 +60,6 @@ func init() {
 		cmd.Flags().StringVar(&ciOpts.harness, "harness", beaconci.DefaultHarness, "CI harness to configure (currently only claude)")
 		cmd.Flags().BoolVar(&ciOpts.jsonOutput, "json", false, "Print result as JSON")
 		cmd.Flags().IntVar(&ciOpts.minEvents, "min-events", beaconci.DefaultValidationMin, "Minimum matching events required during validation")
-		cmd.Flags().StringVar(&ciOpts.requireHarness, "require-harness", "", "Require at least one event from this harness")
 	}
 	ciExecCmd.Flags().StringVar(&ciOpts.baseDir, "base-dir", "", "CI session base directory (defaults to $RUNNER_TEMP/beacon or a temp directory)")
 	ciExecCmd.Flags().StringVar(&ciOpts.workDir, "work-dir", "", "Working directory for the child command")
@@ -70,15 +68,14 @@ func init() {
 	ciExecCmd.Flags().IntVar(&ciOpts.httpPort, "otlp-http-port", endpointconfig.DefaultHTTPPort, "Local OTLP HTTP port")
 	ciExecCmd.Flags().StringVar(&ciOpts.contentRetention, "content-retention", string(endpointconfig.ContentRetentionFull), "Content retention mode: metadata, redacted, or full")
 	ciExecCmd.Flags().BoolVar(&ciOpts.keepArtifacts, "keep-artifacts", true, "Keep CI runtime log and collector config after exit")
+	for _, name := range []string{"base-dir", "work-dir", "collector", "otlp-grpc-port", "otlp-http-port"} {
+		_ = ciExecCmd.Flags().MarkHidden(name)
+	}
 }
 
 func runCIExec(cmd *cobra.Command, args []string) error {
 	runCtx, stopSignals := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
-	requireHarness := ciOpts.requireHarness
-	if requireHarness == "" {
-		requireHarness = ciOpts.harness
-	}
 	session, err := beaconci.Provision(beaconci.Options{
 		BaseDir:          ciOpts.baseDir,
 		LogPath:          ciOpts.logPath,
@@ -109,7 +106,8 @@ func runCIExec(cmd *cobra.Command, args []string) error {
 	result := beaconci.Validate(beaconci.ValidationOptions{
 		LogPath:        session.LogPath,
 		MinEvents:      ciOpts.minEvents,
-		RequireHarness: requireHarness,
+		RequireHarness: ciOpts.harness,
+		Since:          session.StartedAtTime(),
 	})
 	execResult := beaconci.ExecResult{
 		Session:         *session,
@@ -147,14 +145,10 @@ func runCIValidate(cmd *cobra.Command, args []string) error {
 	if logPath == "" {
 		logPath = beaconci.DefaultLogPath()
 	}
-	requireHarness := ciOpts.requireHarness
-	if requireHarness == "" {
-		requireHarness = ciOpts.harness
-	}
 	result := beaconci.Validate(beaconci.ValidationOptions{
 		LogPath:        logPath,
 		MinEvents:      ciOpts.minEvents,
-		RequireHarness: requireHarness,
+		RequireHarness: ciOpts.harness,
 	})
 	if ciOpts.jsonOutput {
 		_ = json.NewEncoder(os.Stdout).Encode(result)

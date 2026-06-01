@@ -76,7 +76,7 @@ without installing a persistent endpoint service or changing
 `~/.claude/settings.json`:
 
 ```bash
-./beacon ci exec --harness claude -- claude --print "Summarize this repository in one sentence"
+./beacon ci exec -- claude --print "Summarize this repository in one sentence"
 ```
 
 Beacon starts the bundled `beacon-otelcol` in the foreground, writes a
@@ -89,7 +89,6 @@ Validate an existing CI artifact explicitly:
 
 ```bash
 ./beacon ci validate \
-  --harness claude \
   --log-path "$RUNNER_TEMP/beacon/runtime.jsonl" \
   --min-events 1
 ```
@@ -98,7 +97,7 @@ Upload the log from GitHub Actions for customer-controlled retention:
 
 ```yaml
 - name: Run Claude with Beacon telemetry
-  run: beacon ci exec --harness claude -- claude --print "Summarize this repository"
+  run: beacon ci exec -- claude --print "Summarize this repository"
 
 - name: Upload Beacon telemetry
   if: always()
