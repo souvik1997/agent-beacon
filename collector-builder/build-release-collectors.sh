@@ -8,7 +8,7 @@ targets_dir="${BEACON_COLLECTOR_TARGETS_DIR:-/tmp/beacon-otelcol-targets}"
 cd "$script_dir"
 
 rm -rf "$targets_dir"
-mkdir -p "$targets_dir"
+mkdir -p "$targets_dir" dist
 
 while read -r goos goarch; do
   target="${goos}_${goarch}"
