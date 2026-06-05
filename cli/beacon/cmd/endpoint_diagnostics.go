@@ -85,12 +85,11 @@ func runEndpointDoctor(cmd *cobra.Command, args []string) error {
 		var fixErr error
 		if err := applyDoctorFixes(fixPlan, status); err != nil {
 			fixErr = err
-		} else {
-			status = lifecycle.GetStatus(endpointUserMode(), endpointOpts.logPath)
-			result = buildDoctorResult(status, time.Now())
-			result.Fixes = fixPlan.Fixes
-			result.Skipped = fixPlan.Skipped
 		}
+		status = lifecycle.GetStatus(endpointUserMode(), endpointOpts.logPath)
+		result = buildDoctorResult(status, time.Now())
+		result.Fixes = fixPlan.Fixes
+		result.Skipped = fixPlan.Skipped
 		if err := printDoctorResult(result); err != nil {
 			return err
 		}
@@ -650,8 +649,13 @@ func actionForCheck(check diagnostics.Check, runtimeLog lifecycle.RuntimeLogSour
 	switch check.Name {
 	case "config", "collector_config", "launchd_plist", "collector_health":
 		return doctorRepairCommand(runtimeLog.EffectiveUserMode)
-	case "runtime_log", "runtime_log_permissions":
+	case "runtime_log":
 		return "beacon endpoint doctor --fix"
+	case "runtime_log_permissions":
+		if check.Evidence == "runtime_log_missing" || check.Evidence == "missing_optional_file" {
+			return "beacon endpoint doctor --fix"
+		}
+		return "chmod 644 " + check.Target
 	case "runtime_log_source":
 		if runtimeLog.RequestedUserMode && !runtimeLog.EffectiveUserMode {
 			return "stop the system collector or run beacon endpoint install --user"
