@@ -133,11 +133,6 @@ func runEndpointInventory(cmd *cobra.Command, args []string) error {
 		MCPServers:        configInventory.MCPServers,
 		UserScope:         configInventory.UserScope,
 	}
-	if endpointOpts.writeInventoryEvent {
-		if err := writeInventoryEvents(effectiveCfg, configInventory); err != nil {
-			return err
-		}
-	}
 	if endpointOpts.jsonOutput {
 		if !endpointOpts.allTargets {
 			filtered := []harness.Harness{}
@@ -166,7 +161,13 @@ func runEndpointInventory(cmd *cobra.Command, args []string) error {
 			}
 			result.MCPServers = filteredServers
 		}
-		return json.NewEncoder(os.Stdout).Encode(result)
+		if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
+			return err
+		}
+		if endpointOpts.writeInventoryEvent {
+			return writeInventoryEvents(effectiveCfg, configInventory)
+		}
+		return nil
 	}
 	fmt.Printf("Config: %s\n", result.ConfigPath)
 	fmt.Printf("Runtime log: %s\n", result.LogPath)
@@ -199,6 +200,9 @@ func runEndpointInventory(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Printf("MCP: %s %s scope=%s transport=%s command_present=%t args=%d env_keys=%d\n", server.Runtime, name, server.SourceScope, server.Transport, server.CommandPresent, server.ArgsCount, server.EnvKeyCount)
 	}
+	if endpointOpts.writeInventoryEvent {
+		return writeInventoryEvents(effectiveCfg, configInventory)
+	}
 	return nil
 }
 
@@ -221,8 +225,8 @@ func writeInventoryEvents(cfg endpointconfig.Config, result endpointinventory.Re
 		})
 		event.Content = &schema.ContentInfo{
 			Retention: string(cfg.ContentRetention),
-			Included:  true,
-			Redacted:  true,
+			Included:  cfg.ContentRetention != endpointconfig.ContentRetentionMetadata,
+			Redacted:  cfg.ContentRetention == endpointconfig.ContentRetentionRedacted,
 		}
 		event.Raw = map[string]interface{}{
 			"inventory": map[string]interface{}{
