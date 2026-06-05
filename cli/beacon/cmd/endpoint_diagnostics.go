@@ -87,6 +87,7 @@ type repairFileSnapshot struct {
 	existed bool
 	data    []byte
 	mode    os.FileMode
+	readErr error
 }
 
 type repairRollback struct {
@@ -978,7 +979,10 @@ func rollbackRepairError(err error, rollback *repairRollback) error {
 func snapshotRepairFile(path string) repairFileSnapshot {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return repairFileSnapshot{}
+		if errors.Is(err, os.ErrNotExist) {
+			return repairFileSnapshot{}
+		}
+		return repairFileSnapshot{existed: true, readErr: err}
 	}
 	snapshot := repairFileSnapshot{existed: true, data: data}
 	if info, statErr := os.Stat(path); statErr == nil {
@@ -993,6 +997,9 @@ func restoreRepairFile(path string, snapshot repairFileSnapshot) error {
 			return err
 		}
 		return nil
+	}
+	if snapshot.readErr != nil {
+		return fmt.Errorf("cannot restore %s: pre-repair snapshot failed: %w", path, snapshot.readErr)
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
