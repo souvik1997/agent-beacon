@@ -189,7 +189,7 @@ func TestScanIncludesAllSupportedCurrentUserAndProjectConfigs(t *testing.T) {
 		{runtime: "vscode", path: filepath.Join(home, ".copilot", "hooks", "beacon.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
 		{runtime: "vscode", path: filepath.Join(work, ".github", "hooks", "beacon.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
 		{runtime: "factory", path: filepath.Join(home, ".bash_profile"), scope: ScopeUser, format: formatMetadataOnly, kind: KindProfile},
-		{runtime: "factory", path: filepath.Join(home, ".factory", "settings.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "factory", path: filepath.Join(home, ".factory", "settings.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
 		{runtime: "factory", path: filepath.Join(work, ".factory", "settings.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
 		{runtime: "copilot_cli", path: filepath.Join(home, ".bash_profile"), scope: ScopeUser, format: formatMetadataOnly, kind: KindProfile},
 		{runtime: "opencode", path: filepath.Join(home, ".config", "opencode", "plugins", "beacon.ts"), scope: ScopeUser, format: formatMetadataOnly, kind: KindPlugin},
@@ -267,6 +267,78 @@ mcpServers:
 	}
 	if copilotProfile.BeaconManaged {
 		t.Fatal("factory OTEL marker should not make copilot profile Beacon-managed")
+	}
+}
+
+func TestCopilotManagedDetectionFalsePositives(t *testing.T) {
+	t.Setenv("SHELL", "/bin/zsh")
+	cases := []struct {
+		name    string
+		content string
+		want    bool
+	}{
+		{
+			name:    "commented_out",
+			content: "# export COPILOT_OTEL_ENABLED=true\nexport OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318\n",
+			want:    false,
+		},
+		{
+			name:    "disabled_false",
+			content: "export COPILOT_OTEL_ENABLED=false\nexport OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318\n",
+			want:    false,
+		},
+		{
+			name:    "disabled_zero",
+			content: "export COPILOT_OTEL_ENABLED=0\nexport COPILOT_OTEL_ENDPOINT=http://127.0.0.1:4318\n",
+			want:    false,
+		},
+		{
+			name:    "enabled_no_endpoint",
+			content: "export COPILOT_OTEL_ENABLED=true\n",
+			want:    false,
+		},
+		{
+			name:    "enabled_remote_endpoint",
+			content: "export COPILOT_OTEL_ENABLED=true\nexport COPILOT_OTEL_ENDPOINT=http://remote.example.com:4318\n",
+			want:    false,
+		},
+		{
+			name:    "enabled_with_local_endpoint",
+			content: "export COPILOT_OTEL_ENABLED=true\nexport COPILOT_OTEL_ENDPOINT=http://127.0.0.1:4318\n",
+			want:    true,
+		},
+		{
+			name:    "enabled_with_generic_otlp_endpoint",
+			content: "export COPILOT_OTEL_ENABLED=1\nexport OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318\n",
+			want:    true,
+		},
+		{
+			name:    "factory_endpoint_only",
+			content: "export OTEL_TELEMETRY_ENDPOINT=http://127.0.0.1:4318\n",
+			want:    false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			home := t.TempDir()
+			work := t.TempDir()
+			writeFile(t, filepath.Join(home, ".zshrc"), tc.content)
+
+			result := Scan(Options{
+				ContentRetention: RedactionRedacted,
+				HomeDir:          home,
+				WorkingDir:       work,
+				Now:              fixedNow,
+			})
+
+			copilotProfile := findConfig(result.Configs, "copilot_cli", filepath.Join(home, ".zshrc"))
+			if copilotProfile == nil {
+				t.Fatal("copilot shell profile config not found")
+			}
+			if copilotProfile.BeaconManaged != tc.want {
+				t.Fatalf("copilot BeaconManaged = %t, want %t", copilotProfile.BeaconManaged, tc.want)
+			}
+		})
 	}
 }
 

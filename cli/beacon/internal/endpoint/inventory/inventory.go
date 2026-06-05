@@ -224,7 +224,7 @@ func vscodeCandidates(home, wd string) []candidate {
 func factoryCandidates(home, wd string) []candidate {
 	return []candidate{
 		{runtime: "factory", path: shellProfilePath(home), scope: ScopeUser, format: formatMetadataOnly, kind: KindProfile},
-		{runtime: "factory", path: filepath.Join(home, ".factory", "settings.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "factory", path: filepath.Join(home, ".factory", "settings.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
 		{runtime: "factory", path: filepath.Join(wd, ".factory", "settings.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
 	}
 }
@@ -578,10 +578,46 @@ func beaconManaged(item candidate, data []byte) bool {
 	if item.runtime == "factory" && strings.Contains(text, "OTEL_TELEMETRY_ENDPOINT") && localEndpointText(text) {
 		return true
 	}
-	if item.runtime == "copilot_cli" && strings.Contains(text, "COPILOT_OTEL_ENABLED") && localEndpointText(text) {
+	if item.runtime == "copilot_cli" && copilotOTELEnabled(text) {
 		return true
 	}
 	return false
+}
+
+func copilotOTELEnabled(text string) bool {
+	enabled := shellExportValue(text, "COPILOT_OTEL_ENABLED")
+	if !truthyValue(enabled) {
+		return false
+	}
+	endpoint := shellExportValue(text, "COPILOT_OTEL_ENDPOINT")
+	if endpoint == "" {
+		endpoint = shellExportValue(text, "OTEL_EXPORTER_OTLP_ENDPOINT")
+	}
+	if endpoint == "" {
+		return false
+	}
+	return localEndpointText(endpoint)
+}
+
+func shellExportValue(text, key string) string {
+	for _, line := range strings.Split(text, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+		line = strings.TrimPrefix(line, "export ")
+		if !strings.HasPrefix(line, key+"=") {
+			continue
+		}
+		value := strings.TrimSpace(strings.TrimPrefix(line, key+"="))
+		return strings.Trim(value, `"'`)
+	}
+	return ""
+}
+
+func truthyValue(value string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	return normalized == "true" || normalized == "1"
 }
 
 func localEndpointText(text string) bool {
