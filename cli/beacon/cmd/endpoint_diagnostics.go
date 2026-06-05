@@ -375,7 +375,18 @@ func printPlannedActions(actions []plannedAction) error {
 
 func hookTargets() ([]string, error) {
 	if endpointOpts.allTargets {
-		return []string{"cursor", "vscode", "factory", "opencode", "grok", "hermes", "devin-cli", "devin-desktop", "antigravity"}, nil
+		all := []string{"cursor", "vscode", "factory", "opencode", "grok", "hermes", "devin-cli", "devin-desktop", "antigravity"}
+		if endpointOpts.hookLevel == "project" {
+			filtered := all[:0:0]
+			for _, t := range all {
+				if t == "hermes" {
+					continue
+				}
+				filtered = append(filtered, t)
+			}
+			return filtered, nil
+		}
+		return all, nil
 	}
 	return canonicalHookTargets(splitCSV(endpointOpts.hookHarnesses))
 }
