@@ -22,6 +22,12 @@ const (
 	formatYAML         = "yaml"
 	formatMetadataOnly = "metadata_only"
 
+	KindNativeConfig  = "native_config"
+	KindHookConfig    = "hook_config"
+	KindPlugin        = "plugin"
+	KindProfile       = "profile"
+	KindManagedConfig = "managed_config"
+
 	TransportStdio     = "stdio"
 	TransportHTTP      = "http"
 	TransportSSE       = "sse"
@@ -74,6 +80,8 @@ type Config struct {
 	Path           string `json:"path,omitempty"`
 	PathHash       string `json:"path_hash,omitempty"`
 	Scope          string `json:"scope"`
+	ConfigKind     string `json:"config_kind"`
+	ParserMode     string `json:"parser_mode"`
 	Exists         bool   `json:"exists"`
 	Readable       bool   `json:"readable"`
 	Reason         string `json:"reason,omitempty"`
@@ -110,6 +118,7 @@ type candidate struct {
 	path    string
 	scope   string
 	format  string
+	kind    string
 }
 
 func Scan(opts Options) Result {
@@ -173,81 +182,81 @@ func candidates(home, wd string) []candidate {
 
 func claudeCandidates(home, wd string) []candidate {
 	return []candidate{
-		{runtime: "claude_code", path: filepath.Join(home, ".claude", "settings.json"), scope: ScopeUser, format: formatJSON},
-		{runtime: "claude_code", path: filepath.Join(wd, ".claude", "settings.json"), scope: ScopeProject, format: formatJSON},
-		{runtime: "claude_code", path: "/Library/Application Support/ClaudeCode/managed-settings.json", scope: ScopeManaged, format: formatJSON},
+		{runtime: "claude_code", path: filepath.Join(home, ".claude", "settings.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "claude_code", path: filepath.Join(wd, ".claude", "settings.json"), scope: ScopeProject, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "claude_code", path: "/Library/Application Support/ClaudeCode/managed-settings.json", scope: ScopeManaged, format: formatJSON, kind: KindManagedConfig},
 	}
 }
 
 func codexCandidates(home string) []candidate {
-	return []candidate{{runtime: "codex_cli", path: filepath.Join(home, ".codex", "config.toml"), scope: ScopeUser, format: formatTOML}}
+	return []candidate{{runtime: "codex_cli", path: filepath.Join(home, ".codex", "config.toml"), scope: ScopeUser, format: formatTOML, kind: KindNativeConfig}}
 }
 
 func cursorCandidates(home, wd string) []candidate {
 	return []candidate{
-		{runtime: "cursor", path: filepath.Join(home, ".cursor", "mcp.json"), scope: ScopeUser, format: formatJSON},
-		{runtime: "cursor", path: filepath.Join(wd, ".cursor", "mcp.json"), scope: ScopeProject, format: formatJSON},
-		{runtime: "cursor", path: filepath.Join(home, ".cursor", "hooks.json"), scope: ScopeUser, format: formatJSON},
-		{runtime: "cursor", path: filepath.Join(wd, ".cursor", "hooks.json"), scope: ScopeProject, format: formatJSON},
+		{runtime: "cursor", path: filepath.Join(home, ".cursor", "mcp.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "cursor", path: filepath.Join(wd, ".cursor", "mcp.json"), scope: ScopeProject, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "cursor", path: filepath.Join(home, ".cursor", "hooks.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "cursor", path: filepath.Join(wd, ".cursor", "hooks.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
 	}
 }
 
 func geminiCandidates(home string) []candidate {
-	return []candidate{{runtime: "gemini_cli", path: filepath.Join(home, ".gemini", "settings.json"), scope: ScopeUser, format: formatJSON}}
+	return []candidate{{runtime: "gemini_cli", path: filepath.Join(home, ".gemini", "settings.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig}}
 }
 
 func antigravityCandidates(home, wd string) []candidate {
 	return []candidate{
-		{runtime: "antigravity_cli", path: filepath.Join(home, ".gemini", "config", "hooks.json"), scope: ScopeUser, format: formatJSON},
-		{runtime: "antigravity_cli", path: filepath.Join(wd, ".agents", "hooks.json"), scope: ScopeProject, format: formatJSON},
+		{runtime: "antigravity_cli", path: filepath.Join(home, ".gemini", "config", "hooks.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "antigravity_cli", path: filepath.Join(wd, ".agents", "hooks.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
 	}
 }
 
 func vscodeCandidates(home, wd string) []candidate {
 	return []candidate{
-		{runtime: "vscode", path: vscodeUserSettingsPath(home), scope: ScopeUser, format: formatJSON},
-		{runtime: "vscode", path: filepath.Join(wd, ".vscode", "settings.json"), scope: ScopeProject, format: formatJSON},
-		{runtime: "vscode", path: filepath.Join(home, ".copilot", "hooks", "beacon.json"), scope: ScopeUser, format: formatJSON},
-		{runtime: "vscode", path: filepath.Join(wd, ".github", "hooks", "beacon.json"), scope: ScopeProject, format: formatJSON},
+		{runtime: "vscode", path: vscodeUserSettingsPath(home), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "vscode", path: filepath.Join(wd, ".vscode", "settings.json"), scope: ScopeProject, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "vscode", path: filepath.Join(home, ".copilot", "hooks", "beacon.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "vscode", path: filepath.Join(wd, ".github", "hooks", "beacon.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
 	}
 }
 
 func factoryCandidates(home, wd string) []candidate {
 	return []candidate{
-		{runtime: "factory", path: shellProfilePath(home), scope: ScopeUser, format: formatMetadataOnly},
-		{runtime: "factory", path: filepath.Join(home, ".factory", "settings.json"), scope: ScopeUser, format: formatJSON},
-		{runtime: "factory", path: filepath.Join(wd, ".factory", "settings.json"), scope: ScopeProject, format: formatJSON},
+		{runtime: "factory", path: shellProfilePath(home), scope: ScopeUser, format: formatMetadataOnly, kind: KindProfile},
+		{runtime: "factory", path: filepath.Join(home, ".factory", "settings.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "factory", path: filepath.Join(wd, ".factory", "settings.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
 	}
 }
 
 func copilotCandidates(home string) []candidate {
-	return []candidate{{runtime: "copilot_cli", path: shellProfilePath(home), scope: ScopeUser, format: formatMetadataOnly}}
+	return []candidate{{runtime: "copilot_cli", path: shellProfilePath(home), scope: ScopeUser, format: formatMetadataOnly, kind: KindProfile}}
 }
 
 func opencodeCandidates(home, wd string) []candidate {
 	return []candidate{
-		{runtime: "opencode", path: filepath.Join(home, ".config", "opencode", "plugins", "beacon.ts"), scope: ScopeUser, format: formatMetadataOnly},
-		{runtime: "opencode", path: filepath.Join(wd, ".opencode", "plugins", "beacon.ts"), scope: ScopeProject, format: formatMetadataOnly},
+		{runtime: "opencode", path: filepath.Join(home, ".config", "opencode", "plugins", "beacon.ts"), scope: ScopeUser, format: formatMetadataOnly, kind: KindPlugin},
+		{runtime: "opencode", path: filepath.Join(wd, ".opencode", "plugins", "beacon.ts"), scope: ScopeProject, format: formatMetadataOnly, kind: KindPlugin},
 	}
 }
 
 func hermesCandidates(home string) []candidate {
-	return []candidate{{runtime: "hermes", path: filepath.Join(home, ".hermes", "config.yaml"), scope: ScopeUser, format: formatYAML}}
+	return []candidate{{runtime: "hermes", path: filepath.Join(home, ".hermes", "config.yaml"), scope: ScopeUser, format: formatYAML, kind: KindNativeConfig}}
 }
 
 func devinCandidates(home, wd string) []candidate {
 	return []candidate{
-		{runtime: "devin-cli", path: filepath.Join(home, ".config", "devin", "config.json"), scope: ScopeUser, format: formatJSON},
-		{runtime: "devin-cli", path: filepath.Join(wd, ".devin", "hooks.v1.json"), scope: ScopeProject, format: formatJSON},
-		{runtime: "devin-desktop", path: filepath.Join(home, ".codeium", "windsurf", "hooks.json"), scope: ScopeUser, format: formatJSON},
-		{runtime: "devin-desktop", path: filepath.Join(wd, ".windsurf", "hooks.json"), scope: ScopeProject, format: formatJSON},
+		{runtime: "devin-cli", path: filepath.Join(home, ".config", "devin", "config.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "devin-cli", path: filepath.Join(wd, ".devin", "hooks.v1.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
+		{runtime: "devin-desktop", path: filepath.Join(home, ".codeium", "windsurf", "hooks.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "devin-desktop", path: filepath.Join(wd, ".windsurf", "hooks.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
 	}
 }
 
 func grokCandidates(home, wd string) []candidate {
 	return []candidate{
-		{runtime: "grok", path: filepath.Join(home, ".grok", "hooks", "beacon-endpoint.json"), scope: ScopeUser, format: formatJSON},
-		{runtime: "grok", path: filepath.Join(wd, ".grok", "hooks", "beacon-endpoint.json"), scope: ScopeProject, format: formatJSON},
+		{runtime: "grok", path: filepath.Join(home, ".grok", "hooks", "beacon-endpoint.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "grok", path: filepath.Join(wd, ".grok", "hooks", "beacon-endpoint.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
 	}
 }
 
@@ -285,6 +294,8 @@ func inspectCandidate(item candidate, redaction string) (Config, []MCPServer) {
 		Path:         valueForPath(item.path, redaction),
 		PathHash:     hashString(item.path),
 		Scope:        item.scope,
+		ConfigKind:   item.kind,
+		ParserMode:   item.format,
 		ParserStatus: StatusNotFound,
 		Redaction:    redaction,
 	}
@@ -311,7 +322,7 @@ func inspectCandidate(item candidate, redaction string) (Config, []MCPServer) {
 	}
 	config.Readable = true
 	config.FileSHA256 = hashBytes(data)
-	config.BeaconManaged = beaconManaged(data)
+	config.BeaconManaged = beaconManaged(item, data)
 
 	servers, parseErr := parseMCPServers(item, data, redaction)
 	config.MCPServerCount = len(servers)
@@ -547,14 +558,34 @@ func firstString(raw interface{}) string {
 	}
 }
 
-func beaconManaged(data []byte) bool {
+func beaconManaged(item candidate, data []byte) bool {
 	text := string(data)
-	return strings.Contains(text, "BEACON_ENDPOINT_MODE=1") ||
-		strings.Contains(text, "beacon-managed-opencode-plugin:v1") ||
-		strings.Contains(text, "beacon-managed-grok-hooks:v1") ||
-		strings.Contains(text, "OTEL_EXPORTER_OTLP_ENDPOINT") && (strings.Contains(text, "127.0.0.1") || strings.Contains(text, "localhost")) ||
-		strings.Contains(text, "OTEL_TELEMETRY_ENDPOINT") && (strings.Contains(text, "127.0.0.1") || strings.Contains(text, "localhost")) ||
-		strings.Contains(text, "COPILOT_OTEL_ENABLED") && (strings.Contains(text, "127.0.0.1") || strings.Contains(text, "localhost"))
+	switch item.runtime {
+	case "claude_code", "cursor", "antigravity_cli", "vscode", "factory", "hermes", "devin-cli", "devin-desktop":
+		if strings.Contains(text, "BEACON_ENDPOINT_MODE=1") {
+			return true
+		}
+	case "opencode":
+		return strings.Contains(text, "beacon-managed-opencode-plugin:v1")
+	case "grok":
+		return strings.Contains(text, "beacon-managed-grok-hooks:v1")
+	}
+	if item.runtime == "claude_code" || item.runtime == "codex_cli" || item.runtime == "gemini_cli" || item.runtime == "vscode" {
+		if strings.Contains(text, "OTEL_EXPORTER_OTLP_ENDPOINT") && localEndpointText(text) {
+			return true
+		}
+	}
+	if item.runtime == "factory" && strings.Contains(text, "OTEL_TELEMETRY_ENDPOINT") && localEndpointText(text) {
+		return true
+	}
+	if item.runtime == "copilot_cli" && strings.Contains(text, "COPILOT_OTEL_ENABLED") && localEndpointText(text) {
+		return true
+	}
+	return false
+}
+
+func localEndpointText(text string) bool {
+	return strings.Contains(text, "127.0.0.1") || strings.Contains(text, "localhost")
 }
 
 func hashString(value string) string {
