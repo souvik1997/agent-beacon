@@ -105,7 +105,7 @@ func buildDoctorResult(status lifecycle.Status, generatedAt time.Time) doctorRes
 	checks = append(checks, actionableChecks(status.Diagnostics, status.RuntimeLog)...)
 	checks = append(checks, collectorCheck(status), serviceCheck(status), lastEventCheck(status))
 	for _, h := range status.Harnesses {
-		checks = append(checks, harnessCheck(h, status.LogPath))
+		checks = append(checks, harnessCheck(h, status.LogPath, status.RuntimeLog.EffectiveUserMode))
 	}
 	result := doctorResult{
 		Status:      aggregateCheckStatus(checks),
@@ -694,7 +694,7 @@ func lastEventCheck(status lifecycle.Status) diagnostics.Check {
 	return diagnostics.Check{Name: "last_event", Target: status.LogPath, Status: diagnostics.StatusWarn, Severity: diagnostics.SeverityLow, Message: "runtime log has no events yet", Evidence: "last_event_missing", Action: "beacon endpoint test-event"}
 }
 
-func harnessCheck(h harness.Harness, logPath string) diagnostics.Check {
+func harnessCheck(h harness.Harness, logPath string, effectiveUserMode bool) diagnostics.Check {
 	if !h.Detected {
 		return diagnostics.Check{Name: "harness", Target: h.Name, Status: diagnostics.StatusOK, Severity: diagnostics.SeverityInfo, Message: "not installed", Evidence: "not_installed"}
 	}
@@ -704,19 +704,19 @@ func harnessCheck(h harness.Harness, logPath string) diagnostics.Check {
 		}
 		return diagnostics.Check{Name: "harness", Target: h.Name, Status: diagnostics.StatusOK, Severity: diagnostics.SeverityInfo, Message: h.Message, Evidence: "configured"}
 	}
-	return diagnostics.Check{Name: "harness", Target: h.Name, Status: diagnostics.StatusWarn, Severity: diagnostics.SeverityMedium, Message: h.Message, Evidence: string(h.TelemetryStatus), Action: harnessAction(h)}
+	return diagnostics.Check{Name: "harness", Target: h.Name, Status: diagnostics.StatusWarn, Severity: diagnostics.SeverityMedium, Message: h.Message, Evidence: string(h.TelemetryStatus), Action: harnessAction(h, effectiveUserMode)}
 }
 
 func harnessEventObserved(logPath, name string) bool {
 	return endpointintegrations.HasRecentHarnessEvent(logPath, name)
 }
 
-func harnessAction(h harness.Harness) string {
+func harnessAction(h harness.Harness, effectiveUserMode bool) string {
 	switch h.Capability {
 	case "hooks", "plugin":
 		return "beacon endpoint hooks install --harness " + h.Name
 	case "otel_env", "otel_config":
-		return doctorRepairCommand(endpointUserMode())
+		return doctorRepairCommand(effectiveUserMode)
 	case "admin_otel":
 		return "beacon endpoint integrations claude-cowork setup"
 	}
@@ -841,6 +841,9 @@ func repairCollectorServiceFromStatus(status lifecycle.Status) error {
 	}
 	if endpointOpts.logPath != "" {
 		cfg.LogPath = endpointOpts.logPath
+		if _, err := endpointconfig.Save(cfg); err != nil {
+			return err
+		}
 	}
 	binary, err := endpointcollector.ResolveBinary(cfg.Collector.BinaryPath)
 	if err != nil {
