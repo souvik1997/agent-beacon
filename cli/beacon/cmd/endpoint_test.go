@@ -339,17 +339,17 @@ func TestEndpointElasticCommandsRegistered(t *testing.T) {
 			t.Fatalf("elastic command %v not registered: %#v", path, cmd)
 		}
 	}
-	if endpointElasticInstallPackCmd.Flags().Lookup("output") == nil {
+	if findEndpointLeaf("elastic", "install-pack").Flags().Lookup("output") == nil {
 		t.Fatal("elastic install-pack command missing --output flag")
 	}
-	if endpointElasticUpCmd.Flags().Lookup("pack-dir") == nil {
+	if findEndpointLeaf("elastic", "up").Flags().Lookup("pack-dir") == nil {
 		t.Fatal("elastic up command missing --pack-dir flag")
 	}
-	if endpointElasticDownCmd.Flags().Lookup("pack-dir") == nil {
+	if findEndpointLeaf("elastic", "down").Flags().Lookup("pack-dir") == nil {
 		t.Fatal("elastic down command missing --pack-dir flag")
 	}
 	for _, name := range []string{"user", "system", "log-path"} {
-		if endpointElasticDownCmd.Flags().Lookup(name) == nil {
+		if findEndpointLeaf("elastic", "down").Flags().Lookup(name) == nil {
 			t.Fatalf("elastic down command missing --%s flag", name)
 		}
 	}
@@ -374,7 +374,7 @@ func TestEndpointDatadogCommandsRegistered(t *testing.T) {
 			}
 		}
 	}
-	if endpointDatadogInstallPackCmd.Flags().Lookup("output") == nil {
+	if findEndpointLeaf("datadog", "install-pack").Flags().Lookup("output") == nil {
 		t.Fatal("datadog install-pack command missing --output flag")
 	}
 }
@@ -398,7 +398,7 @@ func TestEndpointSumoCommandsRegistered(t *testing.T) {
 			}
 		}
 	}
-	if endpointSumoInstallPackCmd.Flags().Lookup("output") == nil {
+	if findEndpointLeaf("sumo", "install-pack").Flags().Lookup("output") == nil {
 		t.Fatal("sumo install-pack command missing --output flag")
 	}
 }
@@ -422,7 +422,7 @@ func TestEndpointRapid7CommandsRegistered(t *testing.T) {
 			}
 		}
 	}
-	if endpointRapid7InstallPackCmd.Flags().Lookup("output") == nil {
+	if findEndpointLeaf("rapid7", "install-pack").Flags().Lookup("output") == nil {
 		t.Fatal("rapid7 install-pack command missing --output flag")
 	}
 }
@@ -446,7 +446,7 @@ func TestEndpointS3CommandsRegistered(t *testing.T) {
 			}
 		}
 	}
-	if endpointS3InstallPackCmd.Flags().Lookup("output") == nil {
+	if findEndpointLeaf("s3", "install-pack").Flags().Lookup("output") == nil {
 		t.Fatal("s3 install-pack command missing --output flag")
 	}
 }
@@ -470,7 +470,7 @@ func TestEndpointCloudWatchCommandsRegistered(t *testing.T) {
 			}
 		}
 	}
-	if endpointCloudWatchInstallPackCmd.Flags().Lookup("output") == nil {
+	if findEndpointLeaf("cloudwatch", "install-pack").Flags().Lookup("output") == nil {
 		t.Fatal("cloudwatch install-pack command missing --output flag")
 	}
 }
@@ -494,7 +494,7 @@ func TestEndpointGCSCommandsRegistered(t *testing.T) {
 			}
 		}
 	}
-	if endpointGCSInstallPackCmd.Flags().Lookup("output") == nil {
+	if findEndpointLeaf("gcs", "install-pack").Flags().Lookup("output") == nil {
 		t.Fatal("gcs install-pack command missing --output flag")
 	}
 }
@@ -518,7 +518,7 @@ func TestEndpointSentinelCommandsRegistered(t *testing.T) {
 			}
 		}
 	}
-	if endpointSentinelInstallPackCmd.Flags().Lookup("output") == nil {
+	if findEndpointLeaf("sentinel", "install-pack").Flags().Lookup("output") == nil {
 		t.Fatal("sentinel install-pack command missing --output flag")
 	}
 }
@@ -1083,11 +1083,9 @@ func TestEndpointS3ValidatePrintsAWSCLIInspectionGuidance(t *testing.T) {
 		endpointOpts.systemMode = oldSystemMode
 	})
 
-	output, err := captureStdout(t, func() error {
-		return runEndpointS3Validate(endpointS3ValidateCmd, nil)
-	})
+	output, err := runEndpointLeaf(t, "s3", "validate")
 	if err != nil {
-		t.Fatalf("runEndpointS3Validate returned error: %v", err)
+		t.Fatalf("s3 validate returned error: %v", err)
 	}
 	for _, want := range []string{
 		"Validation event written to",
@@ -1118,9 +1116,7 @@ func TestEndpointCloudWatchPrintConfigPrintsVectorConfig(t *testing.T) {
 		endpointOpts.systemMode = oldSystemMode
 	})
 
-	output, err := captureStdout(t, func() error {
-		return endpointCloudWatchPrintConfigCmd.RunE(endpointCloudWatchPrintConfigCmd, nil)
-	})
+	output, err := runEndpointLeaf(t, "cloudwatch", "print-config")
 	if err != nil {
 		t.Fatalf("endpoint cloudwatch print-config returned error: %v", err)
 	}
@@ -1149,11 +1145,9 @@ func TestEndpointCloudWatchValidatePrintsAWSInspectionGuidance(t *testing.T) {
 		endpointOpts.systemMode = oldSystemMode
 	})
 
-	output, err := captureStdout(t, func() error {
-		return runEndpointCloudWatchValidate(endpointCloudWatchValidateCmd, nil)
-	})
+	output, err := runEndpointLeaf(t, "cloudwatch", "validate")
 	if err != nil {
-		t.Fatalf("runEndpointCloudWatchValidate returned error: %v", err)
+		t.Fatalf("cloudwatch validate returned error: %v", err)
 	}
 	for _, want := range []string{
 		"Validation event written to",
@@ -1184,11 +1178,9 @@ func TestEndpointGCSValidatePrintsGoogleCloudCLIInspectionGuidance(t *testing.T)
 		endpointOpts.systemMode = oldSystemMode
 	})
 
-	output, err := captureStdout(t, func() error {
-		return runEndpointGCSValidate(endpointGCSValidateCmd, nil)
-	})
+	output, err := runEndpointLeaf(t, "gcs", "validate")
 	if err != nil {
-		t.Fatalf("runEndpointGCSValidate returned error: %v", err)
+		t.Fatalf("gcs validate returned error: %v", err)
 	}
 	for _, want := range []string{
 		"Validation event written to",
