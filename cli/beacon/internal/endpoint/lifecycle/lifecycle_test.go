@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	endpointconfig "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/harness"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/schema"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/service"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/writer"
@@ -387,9 +388,12 @@ func TestConfigureHarnessesAcceptsVSCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("configureHarnesses returned error: %v", err)
 	}
-	settingsPath := filepath.Join(home, "Library", "Application Support", "Code", "User", "settings.json")
+	settingsPath, err := harness.VSCodeUserSettingsPath()
+	if err != nil {
+		t.Fatalf("VSCodeUserSettingsPath returned error: %v", err)
+	}
 	if len(paths) != 1 || paths[0] != settingsPath {
-		t.Fatalf("paths = %#v, want VS Code settings path", paths)
+		t.Fatalf("paths = %#v, want VS Code settings path %q", paths, settingsPath)
 	}
 	data, err := os.ReadFile(settingsPath)
 	if err != nil {
@@ -575,4 +579,216 @@ func freePort(t *testing.T) int {
 	}
 	defer ln.Close()
 	return ln.Addr().(*net.TCPAddr).Port
+}
+
+func TestConfigureHarnessesAcceptsClaude(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	cfg := endpointconfig.Config{
+		UserMode:         true,
+		Harnesses:        []string{"claude"},
+		ContentRetention: endpointconfig.ContentRetentionFull,
+		Collector:        endpointconfig.Collector{GRPCPort: 54317},
+	}
+
+	paths, err := configureHarnesses(cfg)
+	if err != nil {
+		t.Fatalf("configureHarnesses returned error: %v", err)
+	}
+	wantPath := filepath.Join(home, ".claude", "settings.json")
+	if len(paths) != 1 || paths[0] != wantPath {
+		t.Fatalf("paths = %#v, want %q", paths, wantPath)
+	}
+	data, err := os.ReadFile(wantPath)
+	if err != nil {
+		t.Fatalf("read Claude settings: %v", err)
+	}
+	text := string(data)
+	if !strings.Contains(text, `"CLAUDE_CODE_ENABLE_TELEMETRY": "1"`) ||
+		!strings.Contains(text, `"OTEL_EXPORTER_OTLP_ENDPOINT": "http://127.0.0.1:54317"`) {
+		t.Fatalf("Claude settings were not configured for local OTLP:\n%s", text)
+	}
+}
+
+func TestSameCollectorPorts(t *testing.T) {
+	base := endpointconfig.Config{Collector: endpointconfig.Collector{GRPCPort: 4317, HTTPPort: 4318}}
+	same := endpointconfig.Config{Collector: endpointconfig.Collector{GRPCPort: 4317, HTTPPort: 4318}}
+	if !sameCollectorPorts(base, same) {
+		t.Fatal("sameCollectorPorts returned false for equal ports")
+	}
+	differentGRPC := endpointconfig.Config{Collector: endpointconfig.Collector{GRPCPort: 14317, HTTPPort: 4318}}
+	if sameCollectorPorts(base, differentGRPC) {
+		t.Fatal("sameCollectorPorts returned true for differing gRPC port")
+	}
+	differentHTTP := endpointconfig.Config{Collector: endpointconfig.Collector{GRPCPort: 4317, HTTPPort: 14318}}
+	if sameCollectorPorts(base, differentHTTP) {
+		t.Fatal("sameCollectorPorts returned true for differing HTTP port")
+	}
+}
+
+func TestLoadOrDefaultFallsBackToDefaultThenLoadsSavedConfig(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	logPath := filepath.Join(home, "runtime.jsonl")
+
+	// No config saved yet: returns a default with the requested log path.
+	got := loadOrDefault(true, logPath)
+	if got.LogPath != logPath {
+		t.Fatalf("default LogPath = %q, want %q", got.LogPath, logPath)
+	}
+	if !got.UserMode {
+		t.Fatal("default config should preserve user mode")
+	}
+
+	// Persist a config and confirm it is loaded back.
+	saved := endpointconfig.Default(true, filepath.Join(home, "saved.jsonl"))
+	saved.ContentRetention = endpointconfig.ContentRetentionMetadata
+	if _, err := endpointconfig.Save(saved); err != nil {
+		t.Fatalf("Save returned error: %v", err)
+	}
+	loaded := loadOrDefault(true, "")
+	if loaded.ContentRetention != endpointconfig.ContentRetentionMetadata {
+		t.Fatalf("loaded ContentRetention = %q, want metadata", loaded.ContentRetention)
+	}
+	// An explicit log path overrides the saved value.
+	overridden := loadOrDefault(true, logPath)
+	if overridden.LogPath != logPath {
+		t.Fatalf("override LogPath = %q, want %q", overridden.LogPath, logPath)
+	}
+}
+
+func TestSnapshotAndRestoreFileRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	if err := os.WriteFile(path, []byte("original"), 0640); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	snap := snapshotFile(path)
+	if !snap.Existed || string(snap.Data) != "original" {
+		t.Fatalf("snapshot did not capture existing file: %#v", snap)
+	}
+
+	if err := os.WriteFile(path, []byte("mutated"), 0640); err != nil {
+		t.Fatalf("mutate file: %v", err)
+	}
+	restoreFile(path, snap)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read restored file: %v", err)
+	}
+	if string(data) != "original" {
+		t.Fatalf("restoreFile did not restore content: %q", string(data))
+	}
+
+	// A snapshot of a missing file restores by removing the file.
+	missing := snapshotFile(filepath.Join(dir, "absent.json"))
+	if missing.Existed {
+		t.Fatal("snapshot of missing file should not report Existed")
+	}
+	restoreFile(path, missing)
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("restoreFile of missing snapshot should remove file, stat err = %v", err)
+	}
+}
+
+func TestInstallRollbackTracksAndRestoresFiles(t *testing.T) {
+	dir := t.TempDir()
+	existing := filepath.Join(dir, "existing.json")
+	if err := os.WriteFile(existing, []byte("before"), 0640); err != nil {
+		t.Fatalf("write existing fixture: %v", err)
+	}
+	created := filepath.Join(dir, "created.json")
+
+	rollback := newInstallRollback(service.Manager{UserMode: true})
+	rollback.Track(existing)
+	rollback.Track(created)
+	rollback.Track("") // ignored
+	rollback.Track(existing) // de-duplicated
+
+	if err := os.WriteFile(existing, []byte("after"), 0640); err != nil {
+		t.Fatalf("mutate existing: %v", err)
+	}
+	if err := os.WriteFile(created, []byte("new"), 0640); err != nil {
+		t.Fatalf("write created: %v", err)
+	}
+
+	rollback.Rollback(Manifest{})
+
+	data, err := os.ReadFile(existing)
+	if err != nil {
+		t.Fatalf("read restored existing: %v", err)
+	}
+	if string(data) != "before" {
+		t.Fatalf("existing file not restored to original: %q", string(data))
+	}
+	if _, err := os.Stat(created); !os.IsNotExist(err) {
+		t.Fatalf("newly created file should be removed on rollback, stat err = %v", err)
+	}
+}
+
+func TestDestinationStatusAndInstallDestinationReportEnabledHEC(t *testing.T) {
+	cfg := endpointconfig.Config{
+		Destinations: &endpointconfig.Destinations{
+			SplunkHEC: &endpointconfig.SplunkHEC{
+				Enabled:    true,
+				Endpoint:   "https://splunk.example/services/collector",
+				Index:      "main",
+				Source:     "beacon",
+				Sourcetype: "beacon:endpoint",
+			},
+			FalconHEC: &endpointconfig.FalconHEC{
+				Enabled:  true,
+				Endpoint: "https://falcon.example/services/collector",
+			},
+		},
+	}
+
+	status := destinationStatus(cfg)
+	if !status.SplunkHEC.Configured || status.SplunkHEC.Endpoint != "https://splunk.example/services/collector" {
+		t.Fatalf("Splunk destination status not reported: %#v", status.SplunkHEC)
+	}
+	if !status.FalconHEC.Configured {
+		t.Fatalf("Falcon destination status not reported: %#v", status.FalconHEC)
+	}
+
+	info := installDestination(cfg)
+	if !strings.Contains(info.Type, "splunk_hec") || !strings.Contains(info.Type, "falcon_hec") {
+		t.Fatalf("installDestination type missing HEC destinations: %q", info.Type)
+	}
+	if !strings.Contains(info.Mode, "hec") {
+		t.Fatalf("installDestination mode missing hec: %q", info.Mode)
+	}
+
+	// With no destinations configured, status is empty and only local JSONL is reported.
+	empty := destinationStatus(endpointconfig.Config{})
+	if empty.SplunkHEC.Configured || empty.FalconHEC.Configured {
+		t.Fatalf("empty config should report no destinations: %#v", empty)
+	}
+	localOnly := installDestination(endpointconfig.Config{})
+	if localOnly.Type != "local_jsonl" {
+		t.Fatalf("installDestination with no HEC = %q, want local_jsonl", localOnly.Type)
+	}
+}
+
+func TestGetStatusAndResolveRuntimeLogReportRequestedConfig(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	logPath := filepath.Join(home, "runtime.jsonl")
+
+	source := ResolveRuntimeLog(true, logPath)
+	if source.EffectiveLogPath != logPath || source.Reason != "explicit runtime log path" {
+		t.Fatalf("ResolveRuntimeLog explicit path = %#v", source)
+	}
+
+	status := GetStatus(true, logPath)
+	if status.LogPath != logPath {
+		t.Fatalf("GetStatus LogPath = %q, want %q", status.LogPath, logPath)
+	}
+	if status.ConfigPath != endpointconfig.ConfigPath(true) {
+		t.Fatalf("GetStatus ConfigPath = %q, want %q", status.ConfigPath, endpointconfig.ConfigPath(true))
+	}
+	if status.Version == "" {
+		t.Fatal("GetStatus should populate Version")
+	}
 }

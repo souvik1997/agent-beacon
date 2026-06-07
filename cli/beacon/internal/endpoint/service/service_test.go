@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -182,5 +183,60 @@ func TestManagerLoadReturnsBootoutFailureWhenReloadFails(t *testing.T) {
 	err := (Manager{UserMode: true}).Load()
 	if err == nil || !strings.Contains(err.Error(), "Boot-out failed") {
 		t.Fatalf("Load error = %v, want bootout failure", err)
+	}
+}
+
+func TestServiceDomainUserAndSystem(t *testing.T) {
+	if got, want := serviceDomain(false), "system"; got != want {
+		t.Fatalf("serviceDomain(system) = %q, want %q", got, want)
+	}
+	user := serviceDomain(true)
+	if !strings.HasPrefix(user, "gui/") {
+		t.Fatalf("serviceDomain(user) = %q, want gui/<uid> prefix", user)
+	}
+	if want := fmt.Sprintf("gui/%d", os.Getuid()); user != want {
+		t.Fatalf("serviceDomain(user) = %q, want %q", user, want)
+	}
+}
+
+func TestLoadAndUnloadAreNoOpsOffDarwin(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("non-darwin launchd contract")
+	}
+	manager := Manager{UserMode: true}
+	called := false
+	oldRun := runLaunchctlCommand
+	runLaunchctlCommand = func(args ...string) (string, error) {
+		called = true
+		return "", errors.New("launchctl should not run off darwin")
+	}
+	t.Cleanup(func() {
+		runLaunchctlCommand = oldRun
+	})
+
+	if err := manager.Load(); err != nil {
+		t.Fatalf("Load off darwin = %v, want nil", err)
+	}
+	if err := manager.Unload(); err != nil {
+		t.Fatalf("Unload off darwin = %v, want nil", err)
+	}
+	if called {
+		t.Fatal("launchctl was invoked off darwin")
+	}
+}
+
+func TestLaunchctlGuidance(t *testing.T) {
+	if got := launchctlGuidance("some unrelated launchctl output", "gui/501", UserLabel); got != "" {
+		t.Fatalf("guidance for unrelated output = %q, want empty", got)
+	}
+
+	withTarget := launchctlGuidance("Bootstrap failed: 5", "gui/501", UserLabel)
+	if !strings.Contains(withTarget, "launchctl bootout gui/501/"+UserLabel) {
+		t.Fatalf("guidance missing domain/label target: %q", withTarget)
+	}
+
+	fallback := launchctlGuidance("Input/output error", "", "")
+	if !strings.Contains(fallback, "the Beacon launchd job") {
+		t.Fatalf("guidance missing generic target fallback: %q", fallback)
 	}
 }
