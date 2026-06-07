@@ -1107,31 +1107,11 @@ func writeEventBundleFiles(out, logPath string, includeRaw bool) error {
 func syntheticEvent(destination string) schema.Event {
 	mode := "local_jsonl"
 	message := "Beacon endpoint pipeline validation event"
-	switch destination {
-	case "wazuh":
-		mode = "localfile"
-		message = "Beacon endpoint Wazuh validation event"
-	case "datadog":
-		mode = "agent_file"
-		message = "Beacon endpoint datadog validation event"
-	case "sumo":
-		mode = "http_source_jsonl"
-		message = "Beacon endpoint Sumo validation event"
-	case "rapid7":
-		mode = "custom_logs_webhook_ndjson"
-		message = "Beacon endpoint Rapid7 validation event"
-	case "s3":
-		mode = "aws_s3_jsonl"
-		message = "Beacon endpoint S3 validation event"
-	case "cloudwatch":
-		mode = "aws_cloudwatch_logs"
-		message = "Beacon endpoint AWS CloudWatch Logs validation event"
-	case "gcs":
-		mode = "google_cloud_storage_jsonl"
-		message = "Beacon endpoint GCS validation event"
-	case "sentinel":
-		mode = "azure_monitor_agent_custom_json_logs"
-		message = "Beacon endpoint Sentinel validation event"
+	// Forwarding-destination modes/messages come from the destination registry
+	// (see siemDestinations); everything else keeps the generic pipeline default.
+	if m, msg, ok := destinationValidationMeta(destination); ok {
+		mode = m
+		message = msg
 	}
 	event := schema.NewEvent(schema.NewEventOptions{
 		Action:       "agent.detected",
