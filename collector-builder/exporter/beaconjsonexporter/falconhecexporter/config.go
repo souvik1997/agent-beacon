@@ -22,6 +22,7 @@ type Config struct {
 	Timeout               time.Duration              `mapstructure:"timeout"`
 	QueueSettings         exporterhelper.QueueConfig `mapstructure:"sending_queue"`
 	RetrySettings         configretry.BackOffConfig  `mapstructure:"retry_on_failure"`
+	ContentRetention      string                     `mapstructure:"content_retention"` // Deprecated no-op; retained for older collector configs.
 	IncludeRuntimeMetrics bool                       `mapstructure:"include_runtime_metrics"`
 	IncludeCodexSpans     bool                       `mapstructure:"include_codex_spans"`
 }

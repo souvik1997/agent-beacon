@@ -35,6 +35,29 @@ func TestSearchReturnsTruncationSummary(t *testing.T) {
 	}
 }
 
+func TestSearchReturnsHistoricalContentSummary(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	event := testEvent("2026-05-13T01:00:00Z", "claude", "prompt.submitted", "prompt")
+	event.Prompt = &schema.PromptInfo{Text: "summarize local MCP use"}
+	event.Content = &schema.ContentInfo{Retention: schema.ContentRetentionMetadata, Included: false}
+	writeLog(t, path, event)
+
+	result, err := Search(Query{LogPath: path, Harness: "claude", Limit: 10})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	if result.Meta.TotalMatched != 1 || len(result.Events) != 1 {
+		t.Fatalf("matched events = total %d len %d, want 1/1", result.Meta.TotalMatched, len(result.Events))
+	}
+	got := result.Events[0]
+	if got.Content == nil || got.Content.Retention != schema.ContentRetentionMetadata {
+		t.Fatalf("content summary = %#v, want historical content metadata", got.Content)
+	}
+	if len(got.Caveats) != 0 {
+		t.Fatalf("unexpected retention caveat for historical content metadata: %#v", got.Caveats)
+	}
+}
+
 func TestListFiltersIncludesRotatedArchives(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "runtime.jsonl")
 	active := testEvent("2026-05-13T01:02:00Z", "cursor", "prompt.submitted", "prompt")

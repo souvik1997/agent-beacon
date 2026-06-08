@@ -15,6 +15,7 @@ type Config struct {
 	RotateBytes           int64  `mapstructure:"rotate_bytes"`
 	RotateArchives        int    `mapstructure:"rotate_archives"`
 	RedactSecrets         bool   `mapstructure:"redact_secrets"`
+	ContentRetention      string `mapstructure:"content_retention"` // Deprecated no-op; retained for older collector configs.
 	IncludeRuntimeMetrics bool   `mapstructure:"include_runtime_metrics"`
 	IncludeCodexSpans     bool   `mapstructure:"include_codex_spans"`
 }

@@ -29,6 +29,7 @@ type MCPSessionInfo = asymptoteobserve.MCPSessionInfo
 type ApprovalInfo = asymptoteobserve.ApprovalInfo
 type PolicyInfo = asymptoteobserve.PolicyInfo
 type PromptInfo = asymptoteobserve.PromptInfo
+type ContentInfo = asymptoteobserve.ContentInfo
 type GenAIInfo = asymptoteobserve.GenAIInfo
 type GenAIAgentInfo = asymptoteobserve.GenAIAgentInfo
 type GenAIConversationInfo = asymptoteobserve.GenAIConversationInfo
@@ -74,6 +75,7 @@ type Event struct {
 	Approval      *ApprovalInfo                     `json:"approval,omitempty"`
 	Policy        *PolicyInfo                       `json:"policy,omitempty"`
 	Prompt        *PromptInfo                       `json:"prompt,omitempty"`
+	Content       *ContentInfo                      `json:"content,omitempty"`
 	Destination   *asymptoteobserve.DestinationInfo `json:"destination,omitempty"`
 	Health        *asymptoteobserve.HealthInfo      `json:"health,omitempty"`
 	GenAI         *GenAIInfo                        `json:"gen_ai,omitempty"`

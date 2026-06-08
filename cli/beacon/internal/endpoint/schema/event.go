@@ -60,6 +60,7 @@ type MCPSessionInfo = asymptoteobserve.MCPSessionInfo
 type ApprovalInfo = asymptoteobserve.ApprovalInfo
 type PolicyInfo = asymptoteobserve.PolicyInfo
 type PromptInfo = asymptoteobserve.PromptInfo
+type ContentInfo = asymptoteobserve.ContentInfo
 type DestinationInfo = asymptoteobserve.DestinationInfo
 type HealthInfo = asymptoteobserve.HealthInfo
 type GenAIInfo = asymptoteobserve.GenAIInfo
@@ -88,5 +89,11 @@ type GenAIWorkflowInfo = asymptoteobserve.GenAIWorkflowInfo
 type Event = asymptoteobserve.Event
 type NewEventOptions = asymptoteobserve.NewEventOptions
 type Envelope = asymptoteobserve.Envelope
+
+const (
+	ContentRetentionMetadata = asymptoteobserve.ContentRetentionMetadata
+	ContentRetentionRedacted = asymptoteobserve.ContentRetentionRedacted
+	ContentRetentionFull     = asymptoteobserve.ContentRetentionFull
+)
 
 var NewEvent = asymptoteobserve.NewEvent

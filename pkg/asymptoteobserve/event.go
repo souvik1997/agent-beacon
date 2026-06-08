@@ -159,6 +159,19 @@ type PromptInfo struct {
 	Text string `json:"text,omitempty"`
 }
 
+type ContentInfo struct {
+	Retention string `json:"retention"`
+	Included  bool   `json:"included"`
+	Redacted  bool   `json:"redacted,omitempty"`
+	Truncated bool   `json:"truncated,omitempty"`
+}
+
+const (
+	ContentRetentionMetadata = "metadata"
+	ContentRetentionRedacted = "redacted"
+	ContentRetentionFull     = "full"
+)
+
 type GenAIAgentInfo struct {
 	Description string `json:"description,omitempty"`
 	ID          string `json:"id,omitempty"`
@@ -332,6 +345,7 @@ type Event struct {
 	Approval      *ApprovalInfo          `json:"approval,omitempty"`
 	Policy        *PolicyInfo            `json:"policy,omitempty"`
 	Prompt        *PromptInfo            `json:"prompt,omitempty"`
+	Content       *ContentInfo           `json:"content,omitempty"`
 	Destination   *DestinationInfo       `json:"destination,omitempty"`
 	Health        *HealthInfo            `json:"health,omitempty"`
 	GenAI         *GenAIInfo             `json:"gen_ai,omitempty"`
@@ -418,6 +432,13 @@ func (e Event) Validate() error {
 		case OriginLocal, OriginCloud, OriginCI:
 		default:
 			return errors.New("origin must be local, cloud, or ci")
+		}
+	}
+	if e.Content != nil {
+		switch e.Content.Retention {
+		case ContentRetentionMetadata, ContentRetentionRedacted, ContentRetentionFull:
+		default:
+			return errors.New("content.retention must be metadata, redacted, or full")
 		}
 	}
 	return nil

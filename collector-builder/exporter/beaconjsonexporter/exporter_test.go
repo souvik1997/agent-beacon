@@ -29,6 +29,30 @@ func TestConfigValidateRequiresPath(t *testing.T) {
 	}
 }
 
+func TestNewExporterAcceptsDeprecatedContentRetention(t *testing.T) {
+	cfg := &Config{
+		Path:             filepath.Join(t.TempDir(), "runtime.jsonl"),
+		MaxEventBytes:    defaultMaxEventBytes,
+		RotateBytes:      defaultRotateBytes,
+		RedactSecrets:    true,
+		ContentRetention: "metadata",
+	}
+	exp, err := newExporter(cfg, exporter.Settings{})
+	if err != nil {
+		t.Fatalf("newExporter returned error: %v", err)
+	}
+	if exp.cfg.ContentRetention != "metadata" {
+		t.Fatalf("ContentRetention = %q, want deprecated value preserved", exp.cfg.ContentRetention)
+	}
+	record := plog.NewLogs().ResourceLogs().AppendEmpty().ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+	record.Attributes().PutStr("beacon.event.action", "prompt.submitted")
+	record.Attributes().PutStr("gen_ai.prompt", "hello")
+	event := exp.eventFromLog(nil, record)
+	if event.Content != nil {
+		t.Fatalf("deprecated content retention should not emit content marker: %#v", event.Content)
+	}
+}
+
 func TestDefaultConfigUsesBoundedRotation(t *testing.T) {
 	cfg := createDefaultConfig()
 	if cfg.RotateBytes != defaultRotateBytes {

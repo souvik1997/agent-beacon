@@ -170,6 +170,10 @@ func copyEvent(event Event) Event {
 		prompt := *event.Prompt
 		out.Prompt = &prompt
 	}
+	if event.Content != nil {
+		content := *event.Content
+		out.Content = &content
+	}
 	if event.Destination != nil {
 		destination := *event.Destination
 		out.Destination = &destination

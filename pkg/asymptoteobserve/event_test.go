@@ -39,6 +39,7 @@ func TestNewEventSetsRequiredInvariants(t *testing.T) {
 	event.Command = &CommandInfo{Command: "go test ./..."}
 	event.MCP = &MCPInfo{Server: "github", Tool: "get_issue", Method: &MCPMethodInfo{Name: "tools/call"}}
 	event.Prompt = &PromptInfo{Text: "Summarize this file"}
+	event.Content = &ContentInfo{Retention: ContentRetentionMetadata, Included: false}
 	event.GenAI = &GenAIInfo{
 		Provider: &GenAIProviderInfo{Name: "openai"},
 		Request:  &GenAIRequestInfo{Model: "gpt-4o"},
@@ -46,6 +47,22 @@ func TestNewEventSetsRequiredInvariants(t *testing.T) {
 	}
 	if err := event.Validate(); err != nil {
 		t.Fatalf("Validate rejected optional telemetry fields: %v", err)
+	}
+}
+
+func TestValidateContentRetentionValuesForCompatibility(t *testing.T) {
+	for _, retention := range []string{ContentRetentionMetadata, ContentRetentionRedacted, ContentRetentionFull} {
+		t.Run(retention, func(t *testing.T) {
+			event := NewEvent(NewEventOptions{
+				Action:  "tool.invoked",
+				Harness: HarnessInfo{Name: "cursor"},
+			})
+			event.Content = &ContentInfo{Retention: retention, Included: retention != ContentRetentionMetadata}
+
+			if err := event.Validate(); err != nil {
+				t.Fatalf("Validate rejected retention %q: %v", retention, err)
+			}
+		})
 	}
 }
 

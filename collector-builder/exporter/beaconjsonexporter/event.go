@@ -23,6 +23,7 @@ type commandInfo = beaconevent.CommandInfo
 type mcpInfo = beaconevent.MCPInfo
 type approvalInfo = beaconevent.ApprovalInfo
 type promptInfo = beaconevent.PromptInfo
+type contentInfo = beaconevent.ContentInfo
 type beaconEvent = beaconevent.Event
 
 func newBeaconEvent(action, category, severity, harnessName string, ts time.Time) beaconEvent {
