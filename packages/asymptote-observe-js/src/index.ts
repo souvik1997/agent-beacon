@@ -430,11 +430,10 @@ async function* finishAsyncIterable(iterable: AsyncIterable<unknown>, span: Span
       yield item;
     }
     span.setStatus({ code: SpanStatusCode.OK });
+    span.end();
   } catch (error) {
     endSpanWithError(span, error);
     throw error;
-  } finally {
-    span.end();
   }
 }
 
