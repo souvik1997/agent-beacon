@@ -9,6 +9,7 @@ Beacon Endpoint Agent is a local-only endpoint telemetry agent for AI runtimes. 
 - `cli/beacon`: public `beacon` CLI and endpoint runtime.
 - `cli/beacon-hooks`: hook adapter invoked by Cursor and other supported runtimes.
 - `collector-builder`: OpenTelemetry Collector distribution and Beacon JSONL exporter.
+- `packages/asymptote-observe-js`: TypeScript SDK for cloud agent telemetry that exports Beacon-compatible OpenTelemetry spans.
 - `packaging`: macOS packaging and deployment assets.
 
 Do not recreate or depend on removed `asymptote` mirror trees. Keep new work focused on the Beacon paths above.
@@ -21,6 +22,7 @@ Do not recreate or depend on removed `asymptote` mirror trees. Keep new work foc
 - Do not add broad runtime enforcement unless explicitly requested. Current control behavior is limited to hook-native approvals/denials exposed by supported agent runtimes.
 - Keep direct destination support scoped to local JSONL/Wazuh unless explicitly requested. Elastic support is a file-tailing pack over local JSONL; Beacon itself must not store Elastic credentials or require a hosted Elastic dependency.
 - Beacon writes retained prompt text, command output, raw tool inputs, raw OTLP attributes, and raw diffs to local or customer-controlled logs, subject to local redaction and size limits where supported.
+- The Asymptote Observe TypeScript SDK may default to the hosted `/v1/observe` endpoint as an opt-in cloud SDK contract. Beacon endpoint execution stays local-only/no-network.
 
 ## Telemetry Scope
 
@@ -30,6 +32,7 @@ Supported runtime surfaces today:
 - Cursor hook telemetry for sessions, prompt submission, tool use, command execution, MCP-like tool activity, approval decisions, and file edits where hook payloads expose those fields.
 - Claude Cowork admin-configured OpenTelemetry setup guidance and local validation.
 - `beaconjson` OpenTelemetry Collector exporter that converts OTLP logs, traces, metrics, and resource attributes into Beacon endpoint JSONL.
+- Asymptote Observe TypeScript SDK instrumentation for cloud applications, starting from OpenTelemetry/OpenLLMetry patterns and `observe()` wrappers.
 - Elasticsearch/Filebeat content pack generation for forwarding local Beacon JSONL into customer-managed Elastic deployments or the bundled loopback-only development stack.
 - A local-only dashboard served by `beacon endpoint dashboard`, bound to loopback by default and backed by the runtime JSONL log.
 
@@ -82,6 +85,16 @@ cd collector-builder/exporter/beaconjsonexporter
 go test ./...
 ```
 
+Run TypeScript SDK checks:
+
+```bash
+cd packages/asymptote-observe-js
+npm test
+npm run check
+npm run build
+npm run pack:dry-run
+```
+
 Run the local dashboard during manual testing:
 
 ```bash
@@ -116,7 +129,8 @@ Run the release gates before publishing:
 cd cli/beacon && go test ./...
 cd ../beacon-hooks && go test ./...
 cd ../../collector-builder/exporter/beaconjsonexporter && go test ./...
-cd ../../..
+cd ../../../packages/asymptote-observe-js && npm test && npm run check && npm run build && npm run pack:dry-run
+cd ../..
 sh packaging/macos/test-endpoint-scripts.sh
 ```
 
