@@ -105,6 +105,7 @@ export interface AsymptoteInstrumentationOptions {
 
 interface SDKState {
   instrumentations: Instrumentation[];
+  instrumentationsDisabled: boolean;
   provider: NodeTracerProvider;
   mode: ExportMode;
   observeUrl?: string;
@@ -201,7 +202,7 @@ export function initialize(options: InitializeOptions = {}): void {
   if (instrumentations.length > 0) {
     registerInstrumentations({ instrumentations });
   }
-  state = { instrumentations, provider, mode: resolved.mode, observeUrl: resolved.observeUrl };
+  state = { instrumentations, instrumentationsDisabled: !!options.disableInstrumentations, provider, mode: resolved.mode, observeUrl: resolved.observeUrl };
 
   if (options.instrumentModules) {
     try {
@@ -385,6 +386,9 @@ function observeURL(endpoint: string): string {
 }
 
 function patchOpenLLMetryModules(modules: InstrumentModules): void {
+  if (state?.instrumentationsDisabled) {
+    return;
+  }
   let instrumentations: Instrumentation[];
   if (state?.instrumentations.length) {
     instrumentations = state.instrumentations;
