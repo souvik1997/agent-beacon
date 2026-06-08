@@ -165,7 +165,7 @@ export function initialize(options: InitializeOptions = {}): void {
   if (options.spanExporter) {
     processors.push(makeSpanProcessor(options.spanExporter, options));
   }
-  if (!options.disableDefaultExporter) {
+  if (!options.disableDefaultExporter && !options.spanExporter) {
     if (!resolved.observeUrl) {
       throw new Error("Asymptote Observe default exporter requires an Observe endpoint");
     }
@@ -326,13 +326,14 @@ export function resolveExporterConfig(options: InitializeOptions = {}): Resolved
   const explicitEndpoint = options.otlpEndpoint ?? process.env.ASYMPTOTE_OBSERVE_ENDPOINT ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
   const apiKey = options.apiKey ?? process.env.ASYMPTOTE_OBSERVE_API_KEY;
   const baseUrl = options.baseUrl ?? process.env.ASYMPTOTE_OBSERVE_BASE_URL ?? DEFAULT_HOSTED_BASE_URL;
-  const mode: ExportMode = options.disableDefaultExporter ? "custom" : explicitEndpoint ? "otlp" : apiKey ? "hosted" : "custom";
+  const skipDefault = !!(options.disableDefaultExporter || options.spanExporter);
+  const mode: ExportMode = skipDefault ? "custom" : explicitEndpoint ? "otlp" : apiKey ? "hosted" : "custom";
 
-  if (mode === "custom" && !options.disableDefaultExporter && !explicitEndpoint) {
+  if (mode === "custom" && !skipDefault && !explicitEndpoint) {
     throw new Error("Asymptote Observe requires ASYMPTOTE_OBSERVE_API_KEY for hosted ingest or OTEL_EXPORTER_OTLP_ENDPOINT for explicit OTLP export");
   }
 
-  const observeUrl = options.disableDefaultExporter ? undefined : explicitEndpoint ? observeURL(explicitEndpoint) : observeURL(baseUrl);
+  const observeUrl = skipDefault ? undefined : explicitEndpoint ? observeURL(explicitEndpoint) : observeURL(baseUrl);
   const headers: Record<string, string> = { ...(options.headers ?? {}) };
   if (apiKey && !headers.authorization && !headers.Authorization) {
     headers.authorization = `Bearer ${apiKey}`;
@@ -358,9 +359,15 @@ function observeURL(endpoint: string): string {
 }
 
 function patchOpenLLMetryModules(modules: InstrumentModules): void {
-  const instrumentations = state?.instrumentations.length
-    ? state.instrumentations
-    : initializeAsymptoteInstrumentations();
+  let instrumentations: Instrumentation[];
+  if (state?.instrumentations.length) {
+    instrumentations = state.instrumentations;
+  } else {
+    instrumentations = initializeAsymptoteInstrumentations();
+    if (state) {
+      state.instrumentations = instrumentations;
+    }
+  }
   manuallyInstrumentModules(instrumentations, modules);
 }
 
