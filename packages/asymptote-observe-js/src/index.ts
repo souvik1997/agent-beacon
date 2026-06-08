@@ -38,16 +38,17 @@ import {
   ATTR_BEACON_HARNESS_NAME,
   ATTR_BEACON_ORIGIN,
   ATTR_BEACON_PROMPT_TEXT,
-  ATTR_BEACON_SESSION_ID,
 } from "./constants.js";
 
 export * from "./constants.js";
 
 const DEFAULT_HOSTED_BASE_URL = "https://api.asymptotelabs.ai";
 const DEFAULT_OBSERVE_PATH = "/v1/observe";
+const DEFAULT_OTLP_TRACES_PATH = "/v1/traces";
 const DEFAULT_TRACER_NAME = "asymptote-observe";
 const DEFAULT_SERVICE_NAME = "asymptote-observe-app";
 const SDK_VERSION = "0.0.0";
+const CLAUDE_AGENT_QUERY_WRAPPED = Symbol.for("@asymptote-labs/observe.claude-agent-query-wrapped");
 
 export type ExportMode = "hosted" | "otlp" | "custom";
 
@@ -108,6 +109,10 @@ interface SDKState {
   mode: ExportMode;
   observeUrl?: string;
 }
+
+type ClaudeAgentQueryFunction<T extends (...args: any[]) => any = (...args: any[]) => any> = T & {
+  [CLAUDE_AGENT_QUERY_WRAPPED]?: true;
+};
 
 let state: SDKState | undefined;
 
@@ -271,7 +276,10 @@ export function initializeAsymptoteInstrumentations(options: AsymptoteInstrument
 }
 
 export function wrapClaudeAgentQuery<T extends (...args: any[]) => any>(originalQuery: T): T {
-  return function asymptoteClaudeAgentQuery(this: unknown, ...args: Parameters<T>): ReturnType<T> {
+  if ((originalQuery as ClaudeAgentQueryFunction<T>)[CLAUDE_AGENT_QUERY_WRAPPED]) {
+    return originalQuery;
+  }
+  const wrapped = function asymptoteClaudeAgentQuery(this: unknown, ...args: Parameters<T>): ReturnType<T> {
     const tracer = getTracer();
     const span = tracer.startSpan("claude_agent_sdk.query", {
       kind: SpanKind.CLIENT,
@@ -292,7 +300,11 @@ export function wrapClaudeAgentQuery<T extends (...args: any[]) => any>(original
         throw error;
       }
     });
-  } as T;
+  } as ClaudeAgentQueryFunction<T>;
+  Object.defineProperty(wrapped, CLAUDE_AGENT_QUERY_WRAPPED, {
+    value: true,
+  });
+  return wrapped;
 }
 
 export function startActiveSpan<T>(name: string, fn: (span: Span) => T, options: SpanOptions = {}): T {
@@ -351,9 +363,16 @@ function makeSpanProcessor(exporter: SpanExporter, options: InitializeOptions): 
 }
 
 function observeURL(endpoint: string): string {
-  const trimmed = endpoint.replace(/\/+$/, "");
+  let end = endpoint.length;
+  while (end > 0 && endpoint.charCodeAt(end - 1) === 47) {
+    end -= 1;
+  }
+  const trimmed = endpoint.slice(0, end);
   if (trimmed.endsWith(DEFAULT_OBSERVE_PATH)) {
     return trimmed;
+  }
+  if (trimmed.endsWith(DEFAULT_OTLP_TRACES_PATH)) {
+    return `${trimmed.slice(0, -DEFAULT_OTLP_TRACES_PATH.length)}${DEFAULT_OBSERVE_PATH}`;
   }
   return `${trimmed}${DEFAULT_OBSERVE_PATH}`;
 }

@@ -4,7 +4,6 @@ import { createServer, type IncomingMessage } from "node:http";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
-  ATTR_ASYMPTOTE_SDK_MODE,
   ATTR_BEACON_EVENT_ACTION,
   ATTR_BEACON_EVENT_CATEGORY,
   ATTR_BEACON_HARNESS_NAME,
@@ -63,6 +62,22 @@ describe("resolveExporterConfig", () => {
     expect(config.mode).toBe("otlp");
     expect(config.observeUrl).toBe("http://127.0.0.1:4318/v1/observe");
     expect(config.headers.authorization).toBeUndefined();
+  });
+
+  it("normalizes explicit OTLP traces endpoints to the Observe path", () => {
+    const config = resolveExporterConfig({ otlpEndpoint: "http://127.0.0.1:4318/v1/traces" });
+
+    expect(config.mode).toBe("otlp");
+    expect(config.observeUrl).toBe("http://127.0.0.1:4318/v1/observe");
+  });
+
+  it("normalizes generic OTLP endpoint env when it includes the traces path", () => {
+    process.env.OTEL_EXPORTER_OTLP_ENDPOINT = "http://127.0.0.1:4318/v1/traces/";
+
+    const config = resolveExporterConfig();
+
+    expect(config.mode).toBe("otlp");
+    expect(config.observeUrl).toBe("http://127.0.0.1:4318/v1/observe");
   });
 
   it("prefers Observe endpoint env over generic OTLP endpoint env", () => {
@@ -159,6 +174,26 @@ describe("Asymptote Observe SDK", () => {
 
     expect(isInitialized()).toBe(true);
     expect(() => initialize({ disableDefaultExporter: true })).toThrow(/already initialized/);
+  });
+
+  it("does not wrap Claude Agent query twice when initialized again with instrumented modules", async () => {
+    const exporter = new InMemorySpanExporter();
+    const claudeAgentSDK = {
+      query: async (prompt: string) => ({ ok: true, prompt }),
+    };
+    initialize({
+      spanExporter: exporter,
+      disableDefaultExporter: true,
+      disableBatch: true,
+      instrumentModules: { claudeAgentSDK },
+    });
+
+    initialize({ instrumentModules: { claudeAgentSDK } });
+
+    await expect(claudeAgentSDK.query("explain tracing")).resolves.toEqual({ ok: true, prompt: "explain tracing" });
+    await flush();
+
+    expect(exporter.getFinishedSpans().filter(span => span.name === "claude_agent_sdk.query")).toHaveLength(1);
   });
 
   it("creates OpenLLMetry instrumentations", () => {
