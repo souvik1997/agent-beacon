@@ -204,7 +204,14 @@ export function initialize(options: InitializeOptions = {}): void {
   state = { instrumentations, provider, mode: resolved.mode, observeUrl: resolved.observeUrl };
 
   if (options.instrumentModules) {
-    patch(options.instrumentModules);
+    try {
+      patch(options.instrumentModules);
+    } catch (error) {
+      instrumentations.forEach(i => i.disable());
+      provider.shutdown().catch(() => {});
+      state = undefined;
+      throw error;
+    }
   }
 }
 
