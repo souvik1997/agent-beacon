@@ -454,7 +454,7 @@ function retentionCell(record) {
   const event = record.event || {};
   const labels = [];
   if (event.content?.retention) labels.push(badge(event.content.retention, "badge-muted"));
-  if (event.content?.truncated || event.field_truncated) labels.push(badge("truncated", "badge-warn"));
+  if (event.field_truncated || event.content?.truncated) labels.push(badge("truncated", "badge-warn"));
   if (event.content?.redacted) labels.push(badge("redacted", "badge-warn"));
   return labels.join(" ") || badge("default", "badge-muted");
 }

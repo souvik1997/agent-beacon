@@ -1,7 +1,8 @@
-package asymptotetrace
+package asymptoteobserve
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 )
 
@@ -181,8 +182,28 @@ func copyEvent(event Event) Event {
 		health := *event.Health
 		out.Health = &health
 	}
+	if event.GenAI != nil {
+		out.GenAI = cloneTyped(event.GenAI)
+	}
 	if event.Raw != nil {
 		out.Raw = copyMap(event.Raw)
 	}
 	return out
+}
+
+func cloneTyped[T any](input *T) *T {
+	if input == nil {
+		return nil
+	}
+	data, err := json.Marshal(input)
+	if err != nil {
+		out := *input
+		return &out
+	}
+	var out T
+	if err := json.Unmarshal(data, &out); err != nil {
+		fallback := *input
+		return &fallback
+	}
+	return &out
 }

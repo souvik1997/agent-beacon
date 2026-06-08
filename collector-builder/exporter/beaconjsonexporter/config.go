@@ -10,13 +10,12 @@ const (
 
 // Config controls local JSONL export for Beacon endpoint events.
 type Config struct {
-	Path           string `mapstructure:"path"`
-	MaxEventBytes  int    `mapstructure:"max_event_bytes"`
-	RotateBytes    int64  `mapstructure:"rotate_bytes"`
-	RotateArchives int    `mapstructure:"rotate_archives"`
-	RedactSecrets  bool   `mapstructure:"redact_secrets"`
-	// Deprecated no-op retained so older generated collector configs still load.
-	ContentRetention      string `mapstructure:"content_retention"`
+	Path                  string `mapstructure:"path"`
+	MaxEventBytes         int    `mapstructure:"max_event_bytes"`
+	RotateBytes           int64  `mapstructure:"rotate_bytes"`
+	RotateArchives        int    `mapstructure:"rotate_archives"`
+	RedactSecrets         bool   `mapstructure:"redact_secrets"`
+	ContentRetention      string `mapstructure:"content_retention"` // Deprecated no-op; retained for older collector configs.
 	IncludeRuntimeMetrics bool   `mapstructure:"include_runtime_metrics"`
 	IncludeCodexSpans     bool   `mapstructure:"include_codex_spans"`
 }
