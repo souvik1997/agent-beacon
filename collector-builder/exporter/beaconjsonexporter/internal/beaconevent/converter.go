@@ -447,7 +447,7 @@ func (c Converter) PopulateCommon(event *Event, attrs map[string]interface{}) {
 		}
 	}
 	if event.Event.Category == "prompt" {
-		if text := FirstNonEmpty(FirstTextAttr(attrs, "gen_ai.prompt", "prompt", "user_prompt", "input.prompt", "copilot_chat.user_request"), FirstMessageText(event.GenAI)); text != "" {
+		if text := FirstNonEmpty(FirstTextAttr(attrs, "beacon.prompt.text", "gen_ai.prompt", "prompt", "user_prompt", "input.prompt", "copilot_chat.user_request"), FirstMessageText(event.GenAI)); text != "" {
 			event.Prompt = &PromptInfo{Text: text}
 		}
 	}
@@ -671,7 +671,12 @@ func MCPFromAttrs(attrs map[string]interface{}) *MCPInfo {
 }
 
 func populateRunContext(event *Event, attrs map[string]interface{}) {
-	if FirstString(attrs, asymptoteobserve.AttributeOrigin) == string(asymptoteobserve.OriginCI) {
+	switch FirstString(attrs, asymptoteobserve.AttributeOrigin) {
+	case string(asymptoteobserve.OriginLocal):
+		event.Origin = asymptoteobserve.OriginLocal
+	case string(asymptoteobserve.OriginCloud):
+		event.Origin = asymptoteobserve.OriginCloud
+	case string(asymptoteobserve.OriginCI):
 		event.Origin = asymptoteobserve.OriginCI
 	}
 	run := RunInfo{

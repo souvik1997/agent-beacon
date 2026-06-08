@@ -9,6 +9,10 @@
 .env
 .env.*
 
+# JavaScript dependencies and build outputs
+node_modules/
+packages/*/node_modules/
+
 # Go build outputs
 *.test
 coverage.out
