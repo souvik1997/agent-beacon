@@ -73,8 +73,7 @@ NOTARYTOOL_PROFILE="beacon-notary-profile" \
 
 The package installs files under `/opt/beacon` and runs
 `/opt/beacon/scripts/install-endpoint.sh` in `postinstall` with explicit
-collector and retention settings. The default packaged content retention is
-`full`, matching the shared MDM install wrapper.
+collector settings, matching the shared MDM install wrapper.
 
 opencode support is intentionally not part of the default package install. To
 enable opencode prompt/session/tool telemetry, run Beacon's hook installer in the
@@ -110,9 +109,8 @@ Use these optional Jamf policy parameters when calling
 
 ```text
 Parameter 4: harnesses, default claude,codex
-Parameter 5: content retention, default full
-Parameter 6: OTLP gRPC port, default 4317
-Parameter 7: OTLP HTTP port, default 4318
+Parameter 5: OTLP gRPC port, default 4317
+Parameter 6: OTLP HTTP port, default 4318
 Parameter 8: collector path, default /opt/beacon/bin/beacon-otelcol
 Parameter 9: no-start flag for install.sh only
 Parameter 10: Splunk HEC endpoint for install.sh only

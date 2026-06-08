@@ -133,7 +133,7 @@ func TestPackREADMEMentionsSentinelSetupAndSecretBoundaries(t *testing.T) {
 		"Data Collection Rule",
 		"BeaconRuntime_CL",
 		"Microsoft Sentinel",
-		"content retention",
+		"Content Handling",
 		"/var/log/beacon-agent/runtime.jsonl",
 		"not in Beacon endpoint configuration",
 		"Direct Logs Ingestion API",

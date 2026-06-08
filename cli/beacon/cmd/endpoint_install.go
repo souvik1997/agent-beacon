@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	endpointconfig "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/dashboard"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/harness"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lifecycle"
@@ -103,7 +102,6 @@ func runEndpointInstall(cmd *cobra.Command, args []string) error {
 		HTTPPort:              endpointOpts.httpPort,
 		CollectorPath:         endpointOpts.collectorPath,
 		StartService:          !endpointOpts.noStart,
-		ContentRetention:      endpointconfig.ContentRetention(endpointOpts.contentRetention),
 		IncludeRuntimeMetrics: endpointOpts.includeRuntimeMetrics,
 		IncludeCodexSpans:     endpointOpts.includeCodexSpans,
 		SplunkHEC:             splunkHECOptions(),
@@ -241,7 +239,6 @@ func runEndpointRepair(cmd *cobra.Command, args []string) error {
 		HTTPPort:              endpointOpts.httpPort,
 		CollectorPath:         endpointOpts.collectorPath,
 		StartService:          !endpointOpts.noStart,
-		ContentRetention:      endpointconfig.ContentRetention(endpointOpts.contentRetention),
 		IncludeRuntimeMetrics: endpointOpts.includeRuntimeMetrics,
 		IncludeCodexSpans:     endpointOpts.includeCodexSpans,
 		SplunkHEC:             splunkHECOptions(),

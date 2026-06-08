@@ -83,7 +83,7 @@ func TestConfigureClaudeWritesTelemetryEnvAndBackup(t *testing.T) {
 	}
 }
 
-func TestConfigureClaudeDisablesPromptLoggingForMetadataRetention(t *testing.T) {
+func TestConfigureClaudeEnablesPromptLogging(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	path := filepath.Join(home, ".claude", "settings.json")
@@ -95,9 +95,8 @@ func TestConfigureClaudeDisablesPromptLoggingForMetadataRetention(t *testing.T) 
 	}
 
 	written, err := ConfigureClaude(ConfigureOptions{
-		Endpoint:         "http://127.0.0.1:4317",
-		UserMode:         true,
-		ContentRetention: "metadata",
+		Endpoint: "http://127.0.0.1:4317",
+		UserMode: true,
 	})
 	if err != nil {
 		t.Fatalf("ConfigureClaude returned error: %v", err)
@@ -113,8 +112,8 @@ func TestConfigureClaudeDisablesPromptLoggingForMetadataRetention(t *testing.T) 
 	if err := json.Unmarshal(data, &settings); err != nil {
 		t.Fatalf("unmarshal claude config: %v", err)
 	}
-	if _, ok := settings["env"]["OTEL_LOG_USER_PROMPTS"]; ok {
-		t.Fatalf("metadata retention should remove OTEL_LOG_USER_PROMPTS: %#v", settings["env"])
+	if got := settings["env"]["OTEL_LOG_USER_PROMPTS"]; got != "1" {
+		t.Fatalf("OTEL_LOG_USER_PROMPTS = %q, want 1; env=%#v", got, settings["env"])
 	}
 }
 
@@ -198,14 +197,13 @@ func TestConfigureCodexWritesTelemetryBlockAndBackup(t *testing.T) {
 	}
 }
 
-func TestConfigureCodexDisablesPromptLoggingForMetadataRetention(t *testing.T) {
+func TestConfigureCodexEnablesPromptLogging(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 
 	path, err := ConfigureCodex(ConfigureOptions{
-		Endpoint:         "http://127.0.0.1:4317",
-		UserMode:         true,
-		ContentRetention: "metadata",
+		Endpoint: "http://127.0.0.1:4317",
+		UserMode: true,
 	})
 	if err != nil {
 		t.Fatalf("ConfigureCodex returned error: %v", err)
@@ -214,8 +212,8 @@ func TestConfigureCodexDisablesPromptLoggingForMetadataRetention(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read codex config: %v", err)
 	}
-	if !strings.Contains(string(data), "log_user_prompt = false") {
-		t.Fatalf("metadata retention should disable Codex prompt logging:\n%s", string(data))
+	if !strings.Contains(string(data), "log_user_prompt = true") {
+		t.Fatalf("ConfigureCodex should enable prompt logging:\n%s", string(data))
 	}
 }
 
@@ -334,7 +332,7 @@ func TestConfigureGeminiWritesTelemetryAndBackup(t *testing.T) {
 		t.Fatalf("write existing gemini config: %v", err)
 	}
 
-	written, err := ConfigureGemini(ConfigureOptions{Endpoint: "http://127.0.0.1:4317", UserMode: true, ContentRetention: "full"})
+	written, err := ConfigureGemini(ConfigureOptions{Endpoint: "http://127.0.0.1:4317", UserMode: true})
 	if err != nil {
 		t.Fatalf("ConfigureGemini returned error: %v", err)
 	}
@@ -379,14 +377,13 @@ func TestConfigureGeminiWritesTelemetryAndBackup(t *testing.T) {
 	}
 }
 
-func TestConfigureGeminiDisablesPromptLoggingForMetadataRetention(t *testing.T) {
+func TestConfigureGeminiEnablesPromptLoggingAndTraces(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 
 	path, err := ConfigureGemini(ConfigureOptions{
-		Endpoint:         "http://127.0.0.1:4317",
-		UserMode:         true,
-		ContentRetention: "metadata",
+		Endpoint: "http://127.0.0.1:4317",
+		UserMode: true,
 	})
 	if err != nil {
 		t.Fatalf("ConfigureGemini returned error: %v", err)
@@ -400,11 +397,11 @@ func TestConfigureGeminiDisablesPromptLoggingForMetadataRetention(t *testing.T) 
 		t.Fatalf("unmarshal gemini config: %v", err)
 	}
 	telemetry := settings["telemetry"]
-	if telemetry["logPrompts"] != false {
-		t.Fatalf("metadata retention should disable prompt logging: %#v", telemetry)
+	if telemetry["logPrompts"] != true {
+		t.Fatalf("ConfigureGemini should enable prompt logging: %#v", telemetry)
 	}
-	if telemetry["traces"] != false {
-		t.Fatalf("metadata retention should disable detailed traces: %#v", telemetry)
+	if telemetry["traces"] != true {
+		t.Fatalf("ConfigureGemini should enable detailed traces: %#v", telemetry)
 	}
 }
 

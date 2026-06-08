@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -27,9 +28,6 @@ func TestDefaultUserConfigUsesHomeScopedPaths(t *testing.T) {
 	if len(cfg.Harnesses) != 2 || cfg.Harnesses[0] != "claude" || cfg.Harnesses[1] != "codex" {
 		t.Fatalf("unexpected default harnesses: %#v", cfg.Harnesses)
 	}
-	if cfg.ContentRetention != ContentRetentionFull {
-		t.Fatalf("ContentRetention = %q, want %q", cfg.ContentRetention, ContentRetentionFull)
-	}
 }
 
 func TestSaveLoadRoundTrip(t *testing.T) {
@@ -42,7 +40,6 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	cfg.Collector.IncludeRuntimeMetrics = true
 	cfg.Collector.IncludeCodexSpans = true
 	cfg.EventCategories = []string{"tool", "session"}
-	cfg.ContentRetention = ContentRetentionRedacted
 
 	path, err := Save(cfg)
 	if err != nil {
@@ -71,8 +68,12 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	if len(loaded.EventCategories) != 2 || loaded.EventCategories[1] != "session" {
 		t.Fatalf("EventCategories did not round-trip: %#v", loaded.EventCategories)
 	}
-	if loaded.ContentRetention != ContentRetentionRedacted {
-		t.Fatalf("ContentRetention = %q, want %q", loaded.ContentRetention, ContentRetentionRedacted)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read saved config: %v", err)
+	}
+	if strings.Contains(string(data), "content_retention") {
+		t.Fatalf("saved config unexpectedly contains legacy content_retention: %s", string(data))
 	}
 }
 
@@ -174,14 +175,14 @@ func TestSaveRejectsIncompleteFalconHEC(t *testing.T) {
 	}
 }
 
-func TestLoadDefaultsMissingContentRetentionToFull(t *testing.T) {
+func TestLoadIgnoresLegacyContentRetention(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	path := filepath.Join(home, UserConfigPath)
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		t.Fatalf("mkdir config dir: %v", err)
 	}
-	if err := os.WriteFile(path, []byte(`{"user_mode":true}`), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(`{"user_mode":true,"content_retention":"metadata"}`), 0644); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
 
@@ -189,8 +190,18 @@ func TestLoadDefaultsMissingContentRetentionToFull(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load returned error: %v", err)
 	}
-	if loaded.ContentRetention != ContentRetentionFull {
-		t.Fatalf("ContentRetention = %q, want %q", loaded.ContentRetention, ContentRetentionFull)
+	if !loaded.UserMode {
+		t.Fatal("UserMode = false, want true")
+	}
+	if _, err := Save(loaded); err != nil {
+		t.Fatalf("Save returned error: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read saved config: %v", err)
+	}
+	if strings.Contains(string(data), "content_retention") {
+		t.Fatalf("saved config unexpectedly preserved legacy content_retention: %s", string(data))
 	}
 }
 

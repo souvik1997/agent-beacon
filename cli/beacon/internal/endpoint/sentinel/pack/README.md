@@ -73,8 +73,7 @@ The target table must exist before the DCR can route transformed records to it.
 
 Use `queries.kql` for validation and starter hunting queries. Use
 `detections.kql` as example analytics rule logic; review and tune thresholds,
-repository names, content retention policy, and severity mappings before
-enabling alerts in production.
+repository names, and severity mappings before enabling alerts in production.
 
 ## CEF and Syslog
 
@@ -93,9 +92,8 @@ credentials, DCR identifiers, ingestion endpoints, batching, retries, and
 network failure handling. Keep those concerns outside Beacon's local endpoint
 collector unless you are building a separate managed forwarder.
 
-## Content Retention
+## Content Handling
 
-Beacon content retention defaults to `full`, so prompt text, tool input, command
-output, raw tool payloads, and other retained content may be forwarded to
-Microsoft Sentinel. Use Beacon's `metadata` or `redacted` content retention
-modes for stricter deployments.
+Beacon forwards retained prompt text, tool input, command output, raw tool
+payloads, and related local telemetry to Microsoft Sentinel subject to Beacon's
+secret redaction, sanitization, truncation, and event-size limits.

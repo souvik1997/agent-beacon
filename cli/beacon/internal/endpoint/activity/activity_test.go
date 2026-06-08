@@ -9,11 +9,11 @@ import (
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/schema"
 )
 
-func TestSearchReturnsCompactRetentionAwareDTOs(t *testing.T) {
+func TestSearchReturnsHistoricalContentSummary(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "runtime.jsonl")
 	event := testEvent("2026-05-13T01:00:00Z", "claude", "prompt.submitted", "prompt")
 	event.Prompt = &schema.PromptInfo{Text: "summarize local MCP use"}
-	event.Content = &schema.ContentInfo{Retention: schema.ContentRetentionMetadata, Included: false}
+	event.Content = &schema.ContentInfo{Retention: "metadata", Included: false}
 	writeLog(t, path, event)
 
 	result, err := Search(Query{LogPath: path, Harness: "claude", Limit: 10})
@@ -27,11 +27,11 @@ func TestSearchReturnsCompactRetentionAwareDTOs(t *testing.T) {
 	if got.ID == "" || got.Action != "prompt.submitted" || got.Harness != "claude" {
 		t.Fatalf("unexpected event summary: %#v", got)
 	}
-	if got.Content == nil || got.Content.Retention != schema.ContentRetentionMetadata {
-		t.Fatalf("content summary = %#v, want metadata retention", got.Content)
+	if got.Content == nil || got.Content.Retention != "metadata" {
+		t.Fatalf("content summary = %#v, want historical content metadata", got.Content)
 	}
-	if len(got.Caveats) == 0 {
-		t.Fatal("expected retention caveat")
+	if len(got.Caveats) != 0 {
+		t.Fatalf("unexpected retention caveat for historical content metadata: %#v", got.Caveats)
 	}
 }
 

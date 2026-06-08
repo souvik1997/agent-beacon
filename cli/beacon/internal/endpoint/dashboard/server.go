@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	endpointconfig "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lifecycle"
 )
 
@@ -29,15 +28,14 @@ type Options struct {
 }
 
 type StatusResponse struct {
-	Version          string                          `json:"version"`
-	ConfigPath       string                          `json:"config_path"`
-	LogPath          string                          `json:"log_path"`
-	RuntimeLog       lifecycle.RuntimeLogSource      `json:"runtime_log"`
-	ContentRetention endpointconfig.ContentRetention `json:"content_retention"`
-	Harnesses        interface{}                     `json:"harnesses"`
-	Collector        interface{}                     `json:"collector"`
-	Service          interface{}                     `json:"service"`
-	Diagnostics      interface{}                     `json:"diagnostics"`
+	Version     string                     `json:"version"`
+	ConfigPath  string                     `json:"config_path"`
+	LogPath     string                     `json:"log_path"`
+	RuntimeLog  lifecycle.RuntimeLogSource `json:"runtime_log"`
+	Harnesses   interface{}                `json:"harnesses"`
+	Collector   interface{}                `json:"collector"`
+	Service     interface{}                `json:"service"`
+	Diagnostics interface{}                `json:"diagnostics"`
 }
 
 func Handler(opts Options) (http.Handler, error) {
@@ -55,23 +53,15 @@ func Handler(opts Options) (http.Handler, error) {
 			return
 		}
 		status := lifecycle.GetStatus(opts.UserMode, opts.LogPath)
-		cfg, err := endpointconfig.Load(opts.UserMode)
-		if err != nil {
-			cfg = endpointconfig.Default(opts.UserMode, opts.LogPath)
-		}
-		if opts.LogPath != "" {
-			cfg.LogPath = opts.LogPath
-		}
 		writeJSON(w, StatusResponse{
-			Version:          status.Version,
-			ConfigPath:       status.ConfigPath,
-			LogPath:          status.LogPath,
-			RuntimeLog:       runtimeLog,
-			ContentRetention: cfg.ContentRetention,
-			Harnesses:        status.Harnesses,
-			Collector:        status.Collector,
-			Service:          status.Service,
-			Diagnostics:      status.Diagnostics,
+			Version:     status.Version,
+			ConfigPath:  status.ConfigPath,
+			LogPath:     status.LogPath,
+			RuntimeLog:  runtimeLog,
+			Harnesses:   status.Harnesses,
+			Collector:   status.Collector,
+			Service:     status.Service,
+			Diagnostics: status.Diagnostics,
 		})
 	})
 	mux.HandleFunc("/api/summary", func(w http.ResponseWriter, r *http.Request) {

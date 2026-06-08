@@ -40,7 +40,7 @@ func TestGrokPromptSubmitRecordsPromptAndRawPayload(t *testing.T) {
 	}
 }
 
-func TestGrokMetadataRetentionOmitsPromptAndRawPayload(t *testing.T) {
+func TestGrokIgnoresLegacyRetentionEnv(t *testing.T) {
 	setupHookConfigDirs(t)
 	platformFlag = "grok"
 	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
@@ -54,12 +54,15 @@ func TestGrokMetadataRetentionOmitsPromptAndRawPayload(t *testing.T) {
 		"prompt":        "secret prompt",
 	})
 	event := lastEndpointEvent(t, logPath)
-	if _, ok := event["prompt"]; ok {
-		t.Fatalf("metadata retention should omit prompt: %#v", event["prompt"])
+	if got := event["prompt"].(map[string]interface{})["text"]; got != "secret prompt" {
+		t.Fatalf("prompt.text = %q, want legacy retention env ignored", got)
 	}
 	raw := event["raw"].(map[string]interface{})
-	if _, ok := raw["grok"]; ok {
-		t.Fatalf("metadata retention should omit raw grok payload: %#v", raw)
+	if _, ok := raw["grok"]; !ok {
+		t.Fatalf("legacy retention env should not omit raw grok payload: %#v", raw)
+	}
+	if _, ok := event["content"]; ok {
+		t.Fatalf("legacy retention env should not emit content marker: %#v", event["content"])
 	}
 }
 

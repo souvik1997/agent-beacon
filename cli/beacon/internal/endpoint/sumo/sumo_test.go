@@ -140,7 +140,7 @@ func TestPackREADMEMentionsSumoSetupAndProductionForwarding(t *testing.T) {
 		"customer-managed host-agent",
 		"SUMO_URL",
 		"without a Vector wrapper",
-		"content retention",
+		"Content Handling",
 		"/var/log/beacon-agent/runtime.jsonl",
 	} {
 		if !strings.Contains(readme, want) {

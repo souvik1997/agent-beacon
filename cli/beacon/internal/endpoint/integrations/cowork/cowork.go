@@ -74,7 +74,7 @@ Notes:
 - Claude Cowork export is configured by a Team/Enterprise admin.
 - Claude Desktop must be version %s or newer.
 - The OTLP endpoint must be reachable by Claude Cowork. Use a public HTTPS collector or an authenticated tunnel for local testing.
-- Cowork may include prompt text and tool parameters. Beacon's collector writes configured content fields by default; choose metadata or redacted retention for stricter deployments.
+- Cowork may include prompt text and tool parameters. Beacon applies local redaction and size limits before writing endpoint events.
 `, AdminURL, cfg.Endpoint, cfg.Protocol, headerText(cfg.Headers), resourceAttributesText(cfg.ResourceAttributes), MinVersion)
 }
 

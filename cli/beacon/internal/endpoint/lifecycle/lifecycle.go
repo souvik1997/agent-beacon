@@ -32,7 +32,6 @@ type InstallOptions struct {
 	HTTPPort              int
 	CollectorPath         string
 	StartService          bool
-	ContentRetention      endpointconfig.ContentRetention
 	IncludeRuntimeMetrics bool
 	IncludeCodexSpans     bool
 	SplunkHEC             *endpointconfig.SplunkHEC
@@ -363,9 +362,6 @@ func buildConfig(opts InstallOptions) endpointconfig.Config {
 	cfg.Collector.BinaryPath = opts.CollectorPath
 	cfg.Collector.IncludeRuntimeMetrics = opts.IncludeRuntimeMetrics
 	cfg.Collector.IncludeCodexSpans = opts.IncludeCodexSpans
-	if opts.ContentRetention != "" {
-		cfg.ContentRetention = opts.ContentRetention
-	}
 	if opts.SplunkHEC != nil {
 		if cfg.Destinations == nil {
 			cfg.Destinations = &endpointconfig.Destinations{}
@@ -463,9 +459,6 @@ func restoreFile(path string, snapshot fileSnapshot) {
 }
 
 func preflight(cfg endpointconfig.Config, startService bool) error {
-	if err := endpointconfig.ValidateContentRetention(cfg.ContentRetention); err != nil {
-		return err
-	}
 	if err := endpointconfig.ValidateDestinations(cfg.Destinations); err != nil {
 		return err
 	}
@@ -506,19 +499,19 @@ func configureHarnesses(cfg endpointconfig.Config) ([]string, error) {
 	for _, name := range cfg.Harnesses {
 		switch name {
 		case "claude", "claude_code":
-			path, err := harness.ConfigureClaude(harness.ConfigureOptions{Endpoint: grpcEndpoint, UserMode: cfg.UserMode, ContentRetention: string(cfg.ContentRetention)})
+			path, err := harness.ConfigureClaude(harness.ConfigureOptions{Endpoint: grpcEndpoint, UserMode: cfg.UserMode})
 			if err != nil {
 				return paths, err
 			}
 			paths = append(paths, path)
 		case "codex", "codex_cli":
-			path, err := harness.ConfigureCodex(harness.ConfigureOptions{Endpoint: grpcEndpoint, UserMode: cfg.UserMode, ContentRetention: string(cfg.ContentRetention)})
+			path, err := harness.ConfigureCodex(harness.ConfigureOptions{Endpoint: grpcEndpoint, UserMode: cfg.UserMode})
 			if err != nil {
 				return paths, err
 			}
 			paths = append(paths, path)
 		case "gemini", "gemini_cli":
-			path, err := harness.ConfigureGemini(harness.ConfigureOptions{Endpoint: grpcEndpoint, UserMode: cfg.UserMode, ContentRetention: string(cfg.ContentRetention)})
+			path, err := harness.ConfigureGemini(harness.ConfigureOptions{Endpoint: grpcEndpoint, UserMode: cfg.UserMode})
 			if err != nil {
 				return paths, err
 			}

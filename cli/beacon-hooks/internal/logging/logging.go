@@ -109,18 +109,6 @@ func (l *Logger) EndpointEvent(action, category, severity, message string, field
 		}
 		event[key] = value
 	}
-	retention := string(config.ContentRetentionMode())
-	if retention == "" {
-		retention = "full"
-	}
-	event["content"] = map[string]interface{}{
-		"retention": retention,
-		"included":  retention != "metadata",
-		"redacted":  retention == "redacted",
-	}
-	if raw, ok := event["raw"].(map[string]interface{}); ok {
-		event["raw"] = retentionAwareRaw(raw, retention)
-	}
 	if err := writeEndpointJSON(path, event); err != nil {
 		fmt.Fprintf(os.Stderr, "logging: failed to write endpoint event to %s: %v\n", path, err)
 		return err
@@ -195,10 +183,6 @@ func endpointLogPath() string {
 
 func redactEndpointString(value string) string {
 	return asymptotetrace.RedactString(value)
-}
-
-func retentionAwareRaw(raw map[string]interface{}, retention string) map[string]interface{} {
-	return asymptotetrace.RetentionAwareRaw(raw, retention)
 }
 
 func sanitizeEndpointMap(input map[string]interface{}) map[string]interface{} {

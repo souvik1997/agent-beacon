@@ -28,10 +28,10 @@ func TestConfigValidateRequiresPath(t *testing.T) {
 	}
 }
 
-func TestDefaultConfigUsesFullRetention(t *testing.T) {
+func TestDefaultConfigLeavesLegacyRetentionUnset(t *testing.T) {
 	cfg := createDefaultConfig()
-	if cfg.ContentRetention != "full" {
-		t.Fatalf("ContentRetention = %q, want full", cfg.ContentRetention)
+	if cfg.ContentRetention != "" {
+		t.Fatalf("ContentRetention = %q, want empty legacy no-op", cfg.ContentRetention)
 	}
 }
 
@@ -45,7 +45,7 @@ func TestDefaultConfigUsesBoundedRotation(t *testing.T) {
 	}
 }
 
-func TestNewExporterDefaultsEmptyRetentionToFull(t *testing.T) {
+func TestNewExporterAcceptsEmptyLegacyRetention(t *testing.T) {
 	cfg := &Config{
 		Path:          filepath.Join(t.TempDir(), "runtime.jsonl"),
 		MaxEventBytes: defaultMaxEventBytes,
@@ -56,8 +56,8 @@ func TestNewExporterDefaultsEmptyRetentionToFull(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newExporter returned error: %v", err)
 	}
-	if exp.cfg.ContentRetention != "full" {
-		t.Fatalf("ContentRetention = %q, want full", exp.cfg.ContentRetention)
+	if exp.cfg.ContentRetention != "" {
+		t.Fatalf("ContentRetention = %q, want empty legacy no-op", exp.cfg.ContentRetention)
 	}
 }
 
@@ -274,7 +274,7 @@ func TestConsumeLogsMapsPromptForFullRetention(t *testing.T) {
 	}
 }
 
-func TestMetadataRetentionOmitsTypedPrompt(t *testing.T) {
+func TestLegacyMetadataRetentionDoesNotOmitTypedPrompt(t *testing.T) {
 	exp, err := newExporter(&Config{
 		Path:             filepath.Join(t.TempDir(), "runtime.jsonl"),
 		MaxEventBytes:    defaultMaxEventBytes,
@@ -296,8 +296,11 @@ func TestMetadataRetentionOmitsTypedPrompt(t *testing.T) {
 	}
 
 	event := exp.eventFromLog(nil, record)
-	if event.Prompt != nil {
-		t.Fatalf("metadata retention should omit prompt: %#v", event.Prompt)
+	if event.Prompt == nil || event.Prompt.Text != "summarize this file" {
+		t.Fatalf("legacy metadata retention should not omit prompt: %#v", event.Prompt)
+	}
+	if event.Content != nil {
+		t.Fatalf("legacy metadata retention should not emit content marker: %#v", event.Content)
 	}
 }
 
@@ -866,7 +869,7 @@ func TestCodexToolResultExtractsShellCommand(t *testing.T) {
 	}
 }
 
-func TestMetadataRetentionOmitsCodexPromptMessage(t *testing.T) {
+func TestLegacyMetadataRetentionDoesNotOmitCodexPromptMessage(t *testing.T) {
 	exp, err := newExporter(&Config{
 		Path:             filepath.Join(t.TempDir(), "runtime.jsonl"),
 		MaxEventBytes:    defaultMaxEventBytes,
@@ -884,14 +887,14 @@ func TestMetadataRetentionOmitsCodexPromptMessage(t *testing.T) {
 	rec.Attributes().PutStr("prompt", "do not leak token=codex-secret")
 
 	event := exp.eventFromLog(nil, rec)
-	if event.Prompt != nil {
-		t.Fatalf("metadata retention should omit prompt: %#v", event.Prompt)
+	if event.Prompt == nil || !strings.Contains(event.Prompt.Text, "do not leak") {
+		t.Fatalf("legacy metadata retention should not omit prompt: %#v", event.Prompt)
 	}
-	if strings.Contains(event.Message, "do not leak") || strings.Contains(event.Message, "codex-secret") {
-		t.Fatalf("metadata retention leaked prompt in message: %q", event.Message)
+	if strings.Contains(event.Message, "codex-secret") {
+		t.Fatalf("message leaked unredacted prompt secret: %q", event.Message)
 	}
-	if event.Message != "Codex prompt submitted" {
-		t.Fatalf("message = %q, want metadata-safe placeholder", event.Message)
+	if event.Content != nil {
+		t.Fatalf("legacy metadata retention should not emit content marker: %#v", event.Content)
 	}
 }
 
@@ -1028,7 +1031,7 @@ func TestInferActionMapsGeminiApprovalEvents(t *testing.T) {
 	}
 }
 
-func TestMetadataRetentionDropsRawAttributes(t *testing.T) {
+func TestLegacyMetadataRetentionKeepsRawAttributes(t *testing.T) {
 	exp, err := newExporter(&Config{
 		Path:             filepath.Join(t.TempDir(), "runtime.jsonl"),
 		MaxEventBytes:    defaultMaxEventBytes,
@@ -1041,11 +1044,8 @@ func TestMetadataRetentionDropsRawAttributes(t *testing.T) {
 	}
 
 	raw := exp.rawPayload(map[string]interface{}{"prompt": "do a thing"}, map[string]interface{}{"otel_signal": "logs"})
-	if _, ok := raw["attributes"]; ok {
-		t.Fatalf("metadata retention should not include raw attributes: %#v", raw)
-	}
-	if raw["attribute_count"] != 1 {
-		t.Fatalf("attribute count missing: %#v", raw)
+	if attrs, ok := raw["attributes"].(map[string]interface{}); !ok || attrs["prompt"] != "do a thing" {
+		t.Fatalf("legacy metadata retention should keep raw attributes: %#v", raw)
 	}
 }
 
@@ -1172,7 +1172,7 @@ func TestHarnessNameSeparatesClaudeCodeAndCowork(t *testing.T) {
 }
 
 func TestCopilotSpanActions(t *testing.T) {
-	exp := &beaconExporter{cfg: &Config{ContentRetention: "metadata"}}
+	exp := &beaconExporter{cfg: &Config{}}
 	tests := []struct {
 		name      string
 		spanName  string

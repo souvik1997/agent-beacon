@@ -49,8 +49,8 @@ func ConfigureGemini(opts ConfigureOptions) (string, error) {
 	telemetry["otlpEndpoint"] = opts.Endpoint
 	telemetry["otlpProtocol"] = "grpc"
 	telemetry["useCollector"] = true
-	telemetry["logPrompts"] = opts.ContentRetention != "metadata"
-	telemetry["traces"] = opts.ContentRetention != "metadata"
+	telemetry["logPrompts"] = true
+	telemetry["traces"] = true
 	delete(telemetry, "outfile")
 	settings["telemetry"] = telemetry
 

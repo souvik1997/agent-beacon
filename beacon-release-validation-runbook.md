@@ -178,7 +178,7 @@ Acceptance criteria:
 
 - Hook status reports Cursor installed.
 - The user confirms the prompt was submitted, or the optional headless command exits successfully.
-- Runtime log contains a Cursor prompt event with the marker when content retention is `full`.
+- Runtime log contains a Cursor prompt event with the marker.
 - Event has stable Beacon fields including `vendor`, `product`, `schema_version`, `event`, timestamp, and a Cursor/session context where available.
 - Cursor remains usable if hook telemetry fails; if the prompt succeeds but no event appears, record this as an integration or hook-coverage finding.
 
@@ -223,7 +223,7 @@ Acceptance criteria:
 
 - The user confirms the prompt was submitted, or the optional headless command exits successfully.
 - Runtime log receives Claude OTLP-derived events.
-- Prompt content appears only when retention mode permits it.
+- Prompt content appears when emitted by the configured Claude telemetry surface.
 - If no events appear, status output makes collector/log path issues diagnosable.
 
 Repo areas to research later:
@@ -266,7 +266,7 @@ Acceptance criteria:
 
 - The user confirms the prompt was submitted, or the optional noninteractive command exits successfully.
 - Runtime log receives Codex OTLP-derived events.
-- Prompt text behavior matches docs: Beacon config disables Codex prompt logging by default, so absence of raw prompt text may be expected, but agent activity events should still appear.
+- Prompt text appears when emitted by Codex; agent activity events should still appear if raw prompt text is absent.
 - Noisy internal transport spans should not dominate the log.
 
 Repo areas to research later:
@@ -312,7 +312,7 @@ Acceptance criteria:
 - `~/.gemini/settings.json` contains Beacon-managed local OTLP telemetry settings with `target` set to `local`, `otlpProtocol` set to `grpc`, `useCollector` set to `true`, and no `outfile`.
 - The user confirms the prompt was submitted, or the optional noninteractive command exits successfully.
 - Runtime log receives Gemini OTLP-derived events with `harness.name=gemini_cli`.
-- Prompt content appears only when retention mode permits it.
+- Prompt content appears when emitted by Gemini.
 - If no events appear, check for project Gemini settings or `GEMINI_TELEMETRY_*` environment variables overriding the user settings.
 
 Repo areas to research later:
@@ -358,7 +358,7 @@ Acceptance criteria:
 
 - Hook status reports OpenCode plugin installed.
 - The user confirms the prompt was submitted, or the optional noninteractive command exits successfully.
-- Runtime log contains OpenCode chat/session activity with the marker when content retention is `full`.
+- Runtime log contains OpenCode chat/session activity with the marker.
 - OpenCode remains usable if Beacon hook execution fails; if the prompt succeeds but no event appears, record this as an integration or hook-coverage finding.
 
 Repo areas to research later:
@@ -411,7 +411,7 @@ After all tests, review `beacon-installation-notes.md` and group findings:
 
 - Docs fixes: docs command, prerequisite, expected-output, broken-link, or troubleshooting updates.
 - CLI fixes: command flags, status clarity, install/repair behavior, error messages, or path mismatch.
-- Hook fixes: Cursor/OpenCode install/status, hook payload parsing, runtime resilience, or content retention.
+- Hook fixes: Cursor/OpenCode install/status, hook payload parsing, runtime resilience, or event content handling.
 - Exporter fixes: Claude/Codex OTLP normalization, filtering, field mapping, or event schema consistency.
 - Elastic fixes: generated pack, Docker Compose stack, Filebeat config, index templates, ingest pipeline, Kibana assets, or docs.
 

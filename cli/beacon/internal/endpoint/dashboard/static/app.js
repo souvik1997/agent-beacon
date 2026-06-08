@@ -122,7 +122,6 @@ async function load({ updateLocation = false, mode = "replace" } = {}) {
 
 function render() {
   setText("#log-path", state.status?.log_path || "Runtime log unavailable");
-  setText("#retention", `Data retention: ${state.status?.content_retention || "metadata"}`);
   setText("#last-updated", state.summary?.last_event_time ? `Last event ${formatTime(state.summary.last_event_time)}` : "");
   renderNewEventsIndicator();
   renderFilterOptions();

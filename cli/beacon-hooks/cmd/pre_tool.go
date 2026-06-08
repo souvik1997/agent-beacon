@@ -9,7 +9,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/config"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/logging"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/state"
 )
@@ -107,9 +106,7 @@ func emitAntigravityPromptFromTranscript(logger *logging.Logger, input map[strin
 		return
 	}
 	fields := sessionFields(sessionID, input)
-	if config.ContentRetentionMode() != config.ContentRetentionMetadata {
-		fields["prompt"] = map[string]interface{}{"text": prompt}
-	}
+	fields["prompt"] = map[string]interface{}{"text": prompt}
 	emitHookEvent(logger, "prompt.submitted", "prompt", "info", "Prompt submitted to agent", input, fields)
 	if err := st.SetPromptEmitted(); err != nil {
 		logger.Warn("Failed to persist prompt state", "error", err.Error())

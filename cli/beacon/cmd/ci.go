@@ -71,7 +71,9 @@ func init() {
 	ciExecCmd.Flags().StringVar(&ciOpts.collectorPath, "collector", "", "Path to a beacon-otelcol binary")
 	ciExecCmd.Flags().IntVar(&ciOpts.grpcPort, "otlp-grpc-port", endpointconfig.DefaultGRPCPort, "Local OTLP gRPC port")
 	ciExecCmd.Flags().IntVar(&ciOpts.httpPort, "otlp-http-port", endpointconfig.DefaultHTTPPort, "Local OTLP HTTP port")
-	ciExecCmd.Flags().StringVar(&ciOpts.contentRetention, "content-retention", string(endpointconfig.ContentRetentionFull), "Content retention mode: metadata, redacted, or full")
+	ciExecCmd.Flags().StringVar(&ciOpts.contentRetention, "content-retention", "", "Deprecated no-op; Beacon always captures full content subject to redaction and size limits")
+	_ = ciExecCmd.Flags().MarkHidden("content-retention")
+	_ = ciExecCmd.Flags().MarkDeprecated("content-retention", "Beacon now always captures full content; this flag is ignored")
 	ciExecCmd.Flags().BoolVar(&ciOpts.keepArtifacts, "keep-artifacts", true, "Keep CI runtime log and collector config after exit")
 	ciExecCmd.Flags().StringVar(&ciOpts.forward, "forward", "", "Optionally forward events to a customer-managed SIEM: splunk or falcon (token read from the environment)")
 	ciExecCmd.Flags().StringVar(&ciOpts.forwardEndpoint, "forward-endpoint", "", "SIEM HEC endpoint URL for --forward (token comes from BEACON_CI_*_HEC_TOKEN)")
@@ -86,18 +88,17 @@ func runCIExec(cmd *cobra.Command, args []string) error {
 	runCtx, stopSignals := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 	session, err := beaconci.Provision(beaconci.Options{
-		BaseDir:          ciOpts.baseDir,
-		LogPath:          ciOpts.logPath,
-		WorkDir:          ciOpts.workDir,
-		CollectorPath:    ciOpts.collectorPath,
-		GRPCPort:         ciOpts.grpcPort,
-		HTTPPort:         ciOpts.httpPort,
-		Harness:          ciOpts.harness,
-		ContentRetention: endpointconfig.ContentRetention(ciOpts.contentRetention),
-		KeepArtifacts:    ciOpts.keepArtifacts,
-		Forward:          ciOpts.forward,
-		ForwardEndpoint:  ciOpts.forwardEndpoint,
-		Uploads:          ciOpts.uploads,
+		BaseDir:         ciOpts.baseDir,
+		LogPath:         ciOpts.logPath,
+		WorkDir:         ciOpts.workDir,
+		CollectorPath:   ciOpts.collectorPath,
+		GRPCPort:        ciOpts.grpcPort,
+		HTTPPort:        ciOpts.httpPort,
+		Harness:         ciOpts.harness,
+		KeepArtifacts:   ciOpts.keepArtifacts,
+		Forward:         ciOpts.forward,
+		ForwardEndpoint: ciOpts.forwardEndpoint,
+		Uploads:         ciOpts.uploads,
 	})
 	if err != nil {
 		return err

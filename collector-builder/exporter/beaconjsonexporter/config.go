@@ -10,11 +10,12 @@ const (
 
 // Config controls local JSONL export for Beacon endpoint events.
 type Config struct {
-	Path                  string `mapstructure:"path"`
-	MaxEventBytes         int    `mapstructure:"max_event_bytes"`
-	RotateBytes           int64  `mapstructure:"rotate_bytes"`
-	RotateArchives        int    `mapstructure:"rotate_archives"`
-	RedactSecrets         bool   `mapstructure:"redact_secrets"`
+	Path           string `mapstructure:"path"`
+	MaxEventBytes  int    `mapstructure:"max_event_bytes"`
+	RotateBytes    int64  `mapstructure:"rotate_bytes"`
+	RotateArchives int    `mapstructure:"rotate_archives"`
+	RedactSecrets  bool   `mapstructure:"redact_secrets"`
+	// Deprecated no-op retained so older generated collector configs still load.
 	ContentRetention      string `mapstructure:"content_retention"`
 	IncludeRuntimeMetrics bool   `mapstructure:"include_runtime_metrics"`
 	IncludeCodexSpans     bool   `mapstructure:"include_codex_spans"`
@@ -22,11 +23,10 @@ type Config struct {
 
 func createDefaultConfig() *Config {
 	return &Config{
-		MaxEventBytes:    defaultMaxEventBytes,
-		RotateBytes:      defaultRotateBytes,
-		RotateArchives:   defaultRotateArchives,
-		RedactSecrets:    true,
-		ContentRetention: "full",
+		MaxEventBytes:  defaultMaxEventBytes,
+		RotateBytes:    defaultRotateBytes,
+		RotateArchives: defaultRotateArchives,
+		RedactSecrets:  true,
 	}
 }
 
@@ -37,10 +37,5 @@ func (c *Config) Validate() error {
 	if c.MaxEventBytes <= 0 {
 		return fmt.Errorf("max_event_bytes must be positive")
 	}
-	switch c.ContentRetention {
-	case "", "metadata", "redacted", "full":
-		return nil
-	default:
-		return fmt.Errorf("content_retention must be metadata, redacted, or full")
-	}
+	return nil
 }

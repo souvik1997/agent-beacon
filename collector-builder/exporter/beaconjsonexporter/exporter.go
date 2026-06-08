@@ -44,9 +44,6 @@ func newExporter(raw component.Config, set exporter.Settings) (*beaconExporter, 
 	if cfg.RotateArchives <= 0 {
 		cfg.RotateArchives = defaultRotateArchives
 	}
-	if cfg.ContentRetention == "" {
-		cfg.ContentRetention = "full"
-	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -61,7 +58,6 @@ func newExporter(raw component.Config, set exporter.Settings) (*beaconExporter, 
 		},
 		logger: set.Logger,
 		converter: beaconevent.NewConverter(beaconevent.Options{
-			ContentRetention:      cfg.ContentRetention,
 			IncludeRuntimeMetrics: cfg.IncludeRuntimeMetrics,
 			IncludeCodexSpans:     cfg.IncludeCodexSpans,
 		}),
@@ -150,7 +146,6 @@ func (e *beaconExporter) eventConverter() beaconevent.Converter {
 		return beaconevent.NewConverter(beaconevent.Options{})
 	}
 	return beaconevent.NewConverter(beaconevent.Options{
-		ContentRetention:      e.cfg.ContentRetention,
 		IncludeRuntimeMetrics: e.cfg.IncludeRuntimeMetrics,
 		IncludeCodexSpans:     e.cfg.IncludeCodexSpans,
 	})

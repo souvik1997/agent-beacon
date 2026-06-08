@@ -42,7 +42,6 @@ var noisyCodexLogMessages = []string{
 }
 
 type Options struct {
-	ContentRetention      string
 	IncludeRuntimeMetrics bool
 	IncludeCodexSpans     bool
 }
@@ -52,9 +51,6 @@ type Converter struct {
 }
 
 func NewConverter(opts Options) Converter {
-	if opts.ContentRetention == "" {
-		opts.ContentRetention = "full"
-	}
 	return Converter{opts: opts}
 }
 
@@ -442,12 +438,11 @@ func (c Converter) PopulateCommon(event *Event, attrs map[string]interface{}) {
 			Reason:   FirstString(attrs, "approval.reason", "policy.reason", "approval_mode", "active_approval_mode"),
 		}
 	}
-	if c.opts.ContentRetention != "metadata" && event.Event.Category == "prompt" {
+	if event.Event.Category == "prompt" {
 		if text := FirstString(attrs, "gen_ai.prompt", "prompt", "user_prompt", "input.prompt", "copilot_chat.user_request"); text != "" {
 			event.Prompt = &PromptInfo{Text: text}
 		}
 	}
-	event.Content = &ContentInfo{Retention: c.opts.ContentRetention, Included: c.opts.ContentRetention != "metadata", Redacted: c.opts.ContentRetention == "redacted"}
 }
 
 func populateRunContext(event *Event, attrs map[string]interface{}) {
@@ -481,10 +476,6 @@ func (c Converter) RawPayload(attrs map[string]interface{}, extra map[string]int
 	raw := map[string]interface{}{}
 	for k, v := range extra {
 		raw[k] = v
-	}
-	if c.opts.ContentRetention == "metadata" {
-		raw["attribute_count"] = len(attrs)
-		return raw
 	}
 	raw["attributes"] = attrs
 	return raw

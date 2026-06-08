@@ -38,25 +38,20 @@ func TestNewEventSetsRequiredInvariants(t *testing.T) {
 	event.Command = &CommandInfo{Command: "go test ./..."}
 	event.MCP = &MCPInfo{Server: "github", Tool: "get_issue"}
 	event.Prompt = &PromptInfo{Text: "Summarize this file"}
-	event.Content = &ContentInfo{Retention: ContentRetentionFull, Included: true}
 	if err := event.Validate(); err != nil {
 		t.Fatalf("Validate rejected optional telemetry fields: %v", err)
 	}
 }
 
-func TestValidateContentRetentionValues(t *testing.T) {
-	for _, retention := range []string{ContentRetentionMetadata, ContentRetentionRedacted, ContentRetentionFull} {
-		t.Run(retention, func(t *testing.T) {
-			event := NewEvent(NewEventOptions{
-				Action:  "tool.invoked",
-				Harness: HarnessInfo{Name: "cursor"},
-			})
-			event.Content = &ContentInfo{Retention: retention, Included: retention != ContentRetentionMetadata}
+func TestValidateToleratesHistoricalContentField(t *testing.T) {
+	event := NewEvent(NewEventOptions{
+		Action:  "tool.invoked",
+		Harness: HarnessInfo{Name: "cursor"},
+	})
+	event.Content = &ContentInfo{Retention: "metadata", Included: false}
 
-			if err := event.Validate(); err != nil {
-				t.Fatalf("Validate rejected retention %q: %v", retention, err)
-			}
-		})
+	if err := event.Validate(); err != nil {
+		t.Fatalf("Validate rejected historical content field: %v", err)
 	}
 }
 
@@ -106,11 +101,6 @@ func TestValidateRejectsMissingOrInvalidRequiredFields(t *testing.T) {
 			name: "harness",
 			edit: func(e *Event) { e.Harness.Name = "" },
 			want: "harness.name is required",
-		},
-		{
-			name: "content retention",
-			edit: func(e *Event) { e.Content = &ContentInfo{Retention: "raw", Included: true} },
-			want: "content.retention must be metadata, redacted, or full",
 		},
 	}
 

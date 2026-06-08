@@ -5,7 +5,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/config"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/logging"
 )
 
@@ -54,10 +53,8 @@ func opencodeEndpointEvent(input map[string]interface{}, sessionID string) (stri
 
 	switch eventType {
 	case "chat.message":
-		if config.ContentRetentionMode() != config.ContentRetentionMetadata {
-			if prompt := opencodePromptText(input); prompt != "" {
-				fields["prompt"] = map[string]interface{}{"text": prompt}
-			}
+		if prompt := opencodePromptText(input); prompt != "" {
+			fields["prompt"] = map[string]interface{}{"text": prompt}
 		}
 		return "prompt.submitted", "prompt", "info", "Prompt submitted to opencode", fields
 	case "session.created":

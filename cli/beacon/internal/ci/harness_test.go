@@ -3,12 +3,10 @@ package ci
 import (
 	"strings"
 	"testing"
-
-	endpointconfig "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config"
 )
 
-func TestClaudeEnvFullRetentionIncludesPromptLogging(t *testing.T) {
-	env := strings.Join(ClaudeEnv([]string{"PATH=/bin", "OTEL_LOG_USER_PROMPTS=0"}, "http://127.0.0.1:4317", endpointconfig.ContentRetentionFull), "\n")
+func TestClaudeEnvIncludesPromptLogging(t *testing.T) {
+	env := strings.Join(ClaudeEnv([]string{"PATH=/bin", "OTEL_LOG_USER_PROMPTS=0"}, "http://127.0.0.1:4317"), "\n")
 	for _, want := range []string{
 		"CLAUDE_CODE_ENABLE_TELEMETRY=1",
 		"OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317",
@@ -17,12 +15,5 @@ func TestClaudeEnvFullRetentionIncludesPromptLogging(t *testing.T) {
 		if !strings.Contains(env, want) {
 			t.Fatalf("ClaudeEnv missing %q in:\n%s", want, env)
 		}
-	}
-}
-
-func TestClaudeEnvMetadataRetentionOmitsPromptLogging(t *testing.T) {
-	env := strings.Join(ClaudeEnv([]string{"OTEL_LOG_USER_PROMPTS=1"}, "http://127.0.0.1:4317", endpointconfig.ContentRetentionMetadata), "\n")
-	if strings.Contains(env, "OTEL_LOG_USER_PROMPTS=") {
-		t.Fatalf("ClaudeEnv metadata retention should omit OTEL_LOG_USER_PROMPTS:\n%s", env)
 	}
 }

@@ -20,7 +20,7 @@ Do not recreate or depend on removed `asymptote` mirror trees. Keep new work foc
 - Do not add dependency vulnerability scanning, OSV/GHSA lookups, package remediation, or other vulnerability-enforcement flows to the public hook path.
 - Do not add broad runtime enforcement unless explicitly requested. Current control behavior is limited to hook-native approvals/denials exposed by supported agent runtimes.
 - Keep direct destination support scoped to local JSONL/Wazuh unless explicitly requested. Elastic support is a file-tailing pack over local JSONL; Beacon itself must not store Elastic credentials or require a hosted Elastic dependency.
-- Default content retention is `full`: configured prompt text, command output, raw tool inputs, raw OTLP attributes, and raw diffs may be written to local or customer-controlled logs, still subject to local redaction and size limits where supported. Keep `metadata` and `redacted` modes available for stricter deployments.
+- Beacon writes retained prompt text, command output, raw tool inputs, raw OTLP attributes, and raw diffs to local or customer-controlled logs, subject to local redaction and size limits where supported.
 
 ## Telemetry Scope
 
@@ -208,7 +208,7 @@ git worktree remove --force .tmp/release-<tag>
 - For macOS-only behavior, gate tests with `runtime.GOOS == "darwin"` or assert the non-Darwin contract explicitly.
 - Keep endpoint event schema fields stable: `vendor`, `product`, `schema_version`, required event fields, and Wazuh-compatible JSONL output are release contracts.
 - Preserve optional event fields for agent-native metadata (`session`, `tool`, `file`, `command`, `mcp`, `approval`, `content`, `model`, `repository`, and `branch`) without changing existing required field semantics.
-- When adding a new signal, include stable identifiers/counts/hashes alongside any retained raw content, and route raw fields through the configured content retention mode.
+- When adding a new signal, include stable identifiers/counts/hashes alongside any retained raw content, and route raw fields through redaction, sanitization, truncation, and event-size controls.
 - Keep the dashboard read-only. It should inspect local status and JSONL events but must not mutate endpoint configuration or telemetry.
 - Keep the release readiness guidance in `README.md` up to date when install, packaging, collector, or dashboard behavior changes.
 

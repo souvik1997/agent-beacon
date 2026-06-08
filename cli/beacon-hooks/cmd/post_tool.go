@@ -15,7 +15,7 @@ var postToolCmd = &cobra.Command{
 	Use:   "post-tool",
 	Short: "Record file-edit telemetry",
 	Long: `PostToolUse hook - triggered after Write, Edit, or MultiEdit operations.
-The public Beacon build writes local endpoint telemetry using the configured content retention mode.`,
+The public Beacon build writes local endpoint telemetry with local redaction and size limits.`,
 	Run: runPostTool,
 }
 

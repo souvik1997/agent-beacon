@@ -136,7 +136,6 @@ Environment variables take precedence, followed by MDM script parameters:
 
 ```text
 BEACON_ENDPOINT_HARNESSES: default claude,codex
-BEACON_CONTENT_RETENTION: default full
 BEACON_OTLP_GRPC_PORT: default 4317
 BEACON_OTLP_HTTP_PORT: default 4318
 BEACON_COLLECTOR: default /opt/beacon/bin/beacon-otelcol when present
@@ -164,19 +163,18 @@ export OTEL_EXPORTER_OTLP_ENDPOINT="http://127.0.0.1:4318"
 export OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT="true"
 ```
 
-`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` is optional and should
-match deployments that intentionally use Beacon's `full` content retention.
-Beacon validates Copilot CLI through endpoint discovery/status and normalizes
-events when the MDM-managed environment sends OTLP. Copilot CLI currently
-exports OTLP over HTTP, not gRPC.
+`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` is optional. Beacon
+validates Copilot CLI through endpoint discovery/status and normalizes events
+when the MDM-managed environment sends OTLP. Copilot CLI currently exports OTLP
+over HTTP, not gRPC.
 
 Recommended rollout:
 
 1. Upload the signed/notarized package to a pilot group.
 2. Confirm the LaunchDaemon is running and `beacon endpoint wazuh validate`
    writes a validation event.
-3. Add inventory signals for version, service health, log freshness, retention,
-   harnesses, and log writability.
+3. Add inventory signals for version, service health, log freshness, harnesses,
+   and log writability.
 4. Scope repair/remediation to unhealthy devices.
 5. Broaden deployment in stages after inventory and validation stay healthy.
 
@@ -268,18 +266,17 @@ Jamf script parameters:
 
 ```text
 Parameter 4: harnesses, default claude,codex
-Parameter 5: content retention, default full
-Parameter 6: OTLP gRPC port, default 4317
-Parameter 7: OTLP HTTP port, default 4318
-Parameter 8: collector path, default /opt/beacon/bin/beacon-otelcol
-Parameter 9: no-start flag for install.sh only
-Parameter 10: Splunk HEC endpoint for install.sh only
-Parameter 11: Splunk HEC token for install.sh only
-Parameter 12: Splunk index for install.sh only
-Parameter 13: Splunk source for install.sh only
-Parameter 14: Splunk sourcetype for install.sh only
-Parameter 15: Splunk insecure TLS skip verify for install.sh only
-Parameter 16: Splunk CA file for install.sh only
+Parameter 5: OTLP gRPC port, default 4317
+Parameter 6: OTLP HTTP port, default 4318
+Parameter 7: collector path, default /opt/beacon/bin/beacon-otelcol
+Parameter 8: no-start flag for install.sh only
+Parameter 9: Splunk HEC endpoint for install.sh only
+Parameter 10: Splunk HEC token for install.sh only
+Parameter 11: Splunk index for install.sh only
+Parameter 12: Splunk source for install.sh only
+Parameter 13: Splunk sourcetype for install.sh only
+Parameter 14: Splunk insecure TLS skip verify for install.sh only
+Parameter 15: Splunk CA file for install.sh only
 ```
 
 To opt in Gemini CLI telemetry through Jamf, include `gemini` in parameter 4,
@@ -313,7 +310,6 @@ Upload scripts from `packaging/macos/jamf/extension-attributes` to inventory:
 - Beacon version
 - Collector service health
 - Last runtime event age in seconds
-- Content retention mode
 - Configured harnesses
 - Runtime log writability
 - Splunk HEC forwarding state
@@ -323,7 +319,6 @@ Suggested Smart Groups:
 - Beacon version is `not_installed`
 - Collector service health is not `running`
 - Last runtime event age is greater than `86400`
-- Content retention is not `full`
 - Runtime log writability is not `writable` or `creatable`
 
 ### Jamf Validation
@@ -354,34 +349,32 @@ Fleet install script positional arguments:
 
 ```text
 install.sh argument 1: harnesses, default claude,codex
-install.sh argument 2: content retention, default full
-install.sh argument 3: OTLP gRPC port, default 4317
-install.sh argument 4: OTLP HTTP port, default 4318
-install.sh argument 5: collector path, default /opt/beacon/bin/beacon-otelcol
-install.sh argument 6: no-start flag, accepts 1/true/yes
-install.sh argument 7: Splunk HEC endpoint
-install.sh argument 8: Splunk HEC token
-install.sh argument 9: Splunk index
-install.sh argument 10: Splunk source
-install.sh argument 11: Splunk sourcetype
-install.sh argument 12: Splunk insecure TLS skip verify
-install.sh argument 13: Splunk CA file
+install.sh argument 2: OTLP gRPC port, default 4317
+install.sh argument 3: OTLP HTTP port, default 4318
+install.sh argument 4: collector path, default /opt/beacon/bin/beacon-otelcol
+install.sh argument 5: no-start flag, accepts 1/true/yes
+install.sh argument 6: Splunk HEC endpoint
+install.sh argument 7: Splunk HEC token
+install.sh argument 8: Splunk index
+install.sh argument 9: Splunk source
+install.sh argument 10: Splunk sourcetype
+install.sh argument 11: Splunk insecure TLS skip verify
+install.sh argument 12: Splunk CA file
 ```
 
 Fleet repair script positional arguments:
 
 ```text
 repair.sh argument 1: harnesses, default claude,codex
-repair.sh argument 2: content retention, default full
-repair.sh argument 3: OTLP gRPC port, default 4317
-repair.sh argument 4: OTLP HTTP port, default 4318
-repair.sh argument 5: Splunk HEC endpoint
-repair.sh argument 6: Splunk HEC token
-repair.sh argument 7: Splunk index
-repair.sh argument 8: Splunk source
-repair.sh argument 9: Splunk sourcetype
-repair.sh argument 10: Splunk insecure TLS skip verify
-repair.sh argument 11: Splunk CA file
+repair.sh argument 2: OTLP gRPC port, default 4317
+repair.sh argument 3: OTLP HTTP port, default 4318
+repair.sh argument 4: Splunk HEC endpoint
+repair.sh argument 5: Splunk HEC token
+repair.sh argument 6: Splunk index
+repair.sh argument 7: Splunk source
+repair.sh argument 8: Splunk sourcetype
+repair.sh argument 9: Splunk insecure TLS skip verify
+repair.sh argument 10: Splunk CA file
 ```
 
 To opt in Gemini CLI telemetry through Fleet, include `gemini` in the harness
@@ -395,12 +388,11 @@ Beacon does not write Copilot shell profiles or `~/.copilot/config.json`.
 Add queries from `packaging/macos/fleet/queries` as Fleet policies or labels.
 They cover package/service/log/config presence and freshness; run
 `/opt/beacon/fleet/scripts/validate.sh` for full CLI-level validation of status,
-content retention, harness configuration, Wazuh validation, and launchd health.
+harness configuration, Wazuh validation, and launchd health.
 
 - `beacon-version.sql`
 - `collector-service-health.sql`
 - `last-event-age-seconds.sql`
-- `content-retention.sql`
 - `configured-harnesses.sql`
 - `runtime-log-writable.sql`
 - `splunk-hec-forwarding.sql`

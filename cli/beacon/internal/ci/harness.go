@@ -5,11 +5,10 @@ import (
 	"net/url"
 	"strings"
 
-	endpointconfig "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/schema"
 )
 
-func ClaudeEnv(base []string, endpoint string, retention endpointconfig.ContentRetention) []string {
+func ClaudeEnv(base []string, endpoint string) []string {
 	env := envMap(base)
 	env["CLAUDE_CODE_ENABLE_TELEMETRY"] = "1"
 	env["OTEL_LOGS_EXPORTER"] = "otlp"
@@ -19,11 +18,7 @@ func ClaudeEnv(base []string, endpoint string, retention endpointconfig.ContentR
 	delete(env, "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT")
 	delete(env, "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT")
 	delete(env, "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
-	if retention == endpointconfig.ContentRetentionMetadata {
-		delete(env, "OTEL_LOG_USER_PROMPTS")
-	} else {
-		env["OTEL_LOG_USER_PROMPTS"] = "1"
-	}
+	env["OTEL_LOG_USER_PROMPTS"] = "1"
 	return flattenEnv(env)
 }
 

@@ -146,12 +146,6 @@ type ContentInfo struct {
 	Truncated bool   `json:"truncated,omitempty"`
 }
 
-const (
-	ContentRetentionMetadata = "metadata"
-	ContentRetentionRedacted = "redacted"
-	ContentRetentionFull     = "full"
-)
-
 type DestinationInfo struct {
 	Type   string `json:"type,omitempty"`
 	Mode   string `json:"mode,omitempty"`
@@ -270,13 +264,6 @@ func (e Event) Validate() error {
 		case OriginLocal, OriginCloud, OriginCI:
 		default:
 			return errors.New("origin must be local, cloud, or ci")
-		}
-	}
-	if e.Content != nil {
-		switch e.Content.Retention {
-		case ContentRetentionMetadata, ContentRetentionRedacted, ContentRetentionFull:
-		default:
-			return errors.New("content.retention must be metadata, redacted, or full")
 		}
 	}
 	return nil

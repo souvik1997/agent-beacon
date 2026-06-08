@@ -65,10 +65,4 @@ type Event = asymptotetrace.Event
 type NewEventOptions = asymptotetrace.NewEventOptions
 type Envelope = asymptotetrace.Envelope
 
-const (
-	ContentRetentionMetadata = asymptotetrace.ContentRetentionMetadata
-	ContentRetentionRedacted = asymptotetrace.ContentRetentionRedacted
-	ContentRetentionFull     = asymptotetrace.ContentRetentionFull
-)
-
 var NewEvent = asymptotetrace.NewEvent

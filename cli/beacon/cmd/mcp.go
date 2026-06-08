@@ -103,7 +103,6 @@ func runMCPDoctor(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	runtimeLog := resolveMCPRuntimeLog()
-	cfg := loadConfigForMode(runtimeLog.EffectiveUserMode, runtimeLog.EffectiveLogPath)
 	fmt.Println("Beacon MCP doctor")
 	fmt.Println()
 	fmt.Printf("Transport: %s\n", normalizedTransport())
@@ -122,7 +121,6 @@ func runMCPDoctor(cmd *cobra.Command, args []string) error {
 	if runtimeLog.Warning != "" {
 		fmt.Printf("Runtime log warning: %s\n", runtimeLog.Warning)
 	}
-	fmt.Printf("Content retention: %s\n", cfg.ContentRetention)
 	if _, statErr := os.Stat(runtimeLog.EffectiveLogPath); statErr != nil && os.IsNotExist(statErr) {
 		fmt.Println("Runtime log check: no log file yet")
 		fmt.Println("Beacon MCP can still start, but activity answers will be empty until endpoint telemetry writes events.")

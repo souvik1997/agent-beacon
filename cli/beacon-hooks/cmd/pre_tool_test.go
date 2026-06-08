@@ -86,7 +86,7 @@ func TestVSCodeHooksEmitLowNoiseTelemetry(t *testing.T) {
 		t.Fatalf("raw.vscode missing: %#v", event["raw"])
 	}
 	if _, ok := event["prompt"]; ok {
-		t.Fatalf("metadata retention should omit prompt: %#v", event["prompt"])
+		t.Fatalf("tool invocation should not include prompt: %#v", event["prompt"])
 	}
 }
 
@@ -207,7 +207,7 @@ func TestRunPromptSubmitEmitsAntigravityUserPromptEvent(t *testing.T) {
 	}
 }
 
-func TestRunPromptSubmitOmitsAntigravityPromptForMetadataRetention(t *testing.T) {
+func TestRunPromptSubmitIgnoresLegacyRetentionEnvForAntigravity(t *testing.T) {
 	setupHookConfigDirs(t)
 	platformFlag = "antigravity"
 	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
@@ -223,8 +223,8 @@ func TestRunPromptSubmitOmitsAntigravityPromptForMetadataRetention(t *testing.T)
 	}
 
 	event := lastEndpointEvent(t, logPath)
-	if _, ok := event["prompt"]; ok {
-		t.Fatalf("metadata retention should omit prompt field: %#v", event["prompt"])
+	if got := event["prompt"].(map[string]interface{})["text"]; got != "summarize this file" {
+		t.Fatalf("prompt.text = %q, want legacy retention env ignored", got)
 	}
 }
 
@@ -320,7 +320,7 @@ func TestRunPromptSubmitEmitsDevinDesktopPromptWithDesktopHarness(t *testing.T) 
 	}
 }
 
-func TestRunPromptSubmitOmitsDevinDesktopPromptForMetadataRetention(t *testing.T) {
+func TestRunPromptSubmitIgnoresLegacyRetentionEnvForDevinDesktop(t *testing.T) {
 	setupHookConfigDirs(t)
 	platformFlag = "devin-desktop"
 	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
@@ -339,12 +339,11 @@ func TestRunPromptSubmitOmitsDevinDesktopPromptForMetadataRetention(t *testing.T
 	}
 
 	event := lastEndpointEvent(t, logPath)
-	if _, ok := event["prompt"]; ok {
-		t.Fatalf("metadata retention should omit prompt: %#v", event["prompt"])
+	if got := event["prompt"].(map[string]interface{})["text"]; got != "summarize token=[REDACTED]" {
+		t.Fatalf("prompt.text = %q, want redacted prompt", got)
 	}
-	content := event["content"].(map[string]interface{})
-	if content["included"] != false {
-		t.Fatalf("content = %#v, want included=false", content)
+	if _, ok := event["content"]; ok {
+		t.Fatalf("legacy retention env should not emit content marker: %#v", event["content"])
 	}
 }
 
@@ -678,7 +677,7 @@ func TestRunPromptSubmitEmitsTypedPromptForFullRetention(t *testing.T) {
 	}
 }
 
-func TestRunPromptSubmitOmitsPromptForMetadataRetention(t *testing.T) {
+func TestRunPromptSubmitIgnoresLegacyRetentionEnv(t *testing.T) {
 	setupHookConfigDirs(t)
 	platformFlag = "cursor"
 	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
@@ -694,8 +693,11 @@ func TestRunPromptSubmitOmitsPromptForMetadataRetention(t *testing.T) {
 	}
 
 	event := lastEndpointEvent(t, logPath)
-	if _, ok := event["prompt"]; ok {
-		t.Fatalf("metadata retention should omit prompt field: %#v", event["prompt"])
+	if got := event["prompt"].(map[string]interface{})["text"]; got != "summarize this file" {
+		t.Fatalf("prompt.text = %q, want legacy retention env ignored", got)
+	}
+	if _, ok := event["content"]; ok {
+		t.Fatalf("legacy retention env should not emit content marker: %#v", event["content"])
 	}
 }
 
