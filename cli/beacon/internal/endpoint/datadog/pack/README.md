@@ -76,11 +76,11 @@ facet or parsing pipeline:
 service:beacon-endpoint-agent "Beacon endpoint datadog validation event"
 ```
 
-## Content Retention
+## Content Handling
 
-Beacon content retention defaults to `full`, so prompt text, tool input, command
-output, and other retained content may be forwarded to Datadog. Use Beacon's
-`metadata` or `redacted` content retention modes for stricter deployments.
+Beacon forwards retained prompt text, tool input, command output, and related
+local telemetry to Datadog subject to Beacon's secret redaction, sanitization,
+truncation, and event-size limits.
 
 ## OpenTelemetry Note
 

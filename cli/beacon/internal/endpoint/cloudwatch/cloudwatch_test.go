@@ -125,7 +125,7 @@ func TestPackREADMEMentionsAWSCloudWatchLogsSetupAndProductionForwarding(t *test
 		"vendor=beacon product=endpoint-agent destination.type=cloudwatch destination.mode=aws_cloudwatch_logs",
 		"vector.toml",
 		"customer-managed host-agent",
-		"content retention",
+		"Content Handling",
 		"/var/log/beacon-agent/runtime.jsonl",
 		"Do not store AWS destination secrets",
 		"encryption",

@@ -135,9 +135,8 @@ Expected validation fields:
 vendor=beacon product=endpoint-agent destination.type=cloudwatch destination.mode=aws_cloudwatch_logs
 ```
 
-## Content Retention
+## Content Handling
 
-Beacon content retention defaults to `full`, so prompt text, tool input, command
-output, raw tool payloads, and other retained content may be forwarded to AWS
-CloudWatch Logs. Use Beacon's `metadata` or `redacted` content retention modes
-for stricter deployments.
+Beacon forwards retained prompt text, tool input, command output, raw tool
+payloads, and related local telemetry to AWS CloudWatch Logs subject to Beacon's
+secret redaction, sanitization, truncation, and event-size limits.

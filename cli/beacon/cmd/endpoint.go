@@ -139,14 +139,6 @@ var endpointConfigValidateCmd = &cobra.Command{
 	RunE:         runEndpointConfigValidate,
 }
 
-var endpointConfigSetRetentionCmd = &cobra.Command{
-	Use:          "set-retention <metadata|redacted|full>",
-	Short:        "Set endpoint content retention mode",
-	Args:         cobra.ExactArgs(1),
-	SilenceUsage: true,
-	RunE:         runEndpointConfigSetRetention,
-}
-
 var topLevelDoctorCmd = &cobra.Command{
 	Use:          "doctor",
 	Short:        "Alias for beacon endpoint doctor",
@@ -359,7 +351,6 @@ func init() {
 	endpointCmd.AddCommand(endpointConfigCmd)
 	endpointConfigCmd.AddCommand(endpointConfigShowCmd)
 	endpointConfigCmd.AddCommand(endpointConfigValidateCmd)
-	endpointConfigCmd.AddCommand(endpointConfigSetRetentionCmd)
 	endpointIntegrationsCmd.AddCommand(endpointIntegrationsValidateCmd)
 	endpointIntegrationsCmd.AddCommand(endpointCoworkCmd)
 	endpointIntegrationsCmd.AddCommand(endpointOpenClawCmd)
@@ -379,7 +370,7 @@ func init() {
 	endpointVSCodeCmd.AddCommand(endpointVSCodeStatusCmd)
 	endpointVSCodeCmd.AddCommand(endpointVSCodeValidateCmd)
 
-	for _, c := range []*cobra.Command{endpointInstallCmd, endpointStatusCmd, endpointDoctorCmd, endpointInventoryCmd, endpointDiscoverCmd, endpointTestEventCmd, endpointBundleDiagnosticsCmd, endpointUninstallCmd, endpointRepairCmd, endpointConfigShowCmd, endpointConfigValidateCmd, endpointConfigSetRetentionCmd, endpointIntegrationsValidateCmd, topLevelDoctorCmd, topLevelStatusCmd, topLevelInventoryCmd} {
+	for _, c := range []*cobra.Command{endpointInstallCmd, endpointStatusCmd, endpointDoctorCmd, endpointInventoryCmd, endpointDiscoverCmd, endpointTestEventCmd, endpointBundleDiagnosticsCmd, endpointUninstallCmd, endpointRepairCmd, endpointConfigShowCmd, endpointConfigValidateCmd, endpointIntegrationsValidateCmd, topLevelDoctorCmd, topLevelStatusCmd, topLevelInventoryCmd} {
 		c.Flags().BoolVar(&endpointOpts.userMode, "user", true, "Use per-user endpoint paths")
 		c.Flags().BoolVar(&endpointOpts.systemMode, "system", false, "Use system endpoint paths and launch daemon")
 		c.Flags().StringVar(&endpointOpts.logPath, "log-path", "", "Runtime JSONL log path")
@@ -393,7 +384,9 @@ func init() {
 	endpointInstallCmd.Flags().BoolVar(&endpointOpts.includeCodexSpans, "include-codex-spans", false, "Include high-volume Codex OTLP spans for troubleshooting")
 	endpointInstallCmd.Flags().BoolVar(&endpointOpts.noStart, "no-start", false, "Write files without starting the launchd service")
 	endpointInstallCmd.Flags().BoolVar(&endpointOpts.dryRun, "dry-run", false, "Print planned actions without changing endpoint files or services")
-	endpointInstallCmd.Flags().StringVar(&endpointOpts.contentRetention, "content-retention", "full", "Content retention mode: metadata, redacted, or full")
+	endpointInstallCmd.Flags().StringVar(&endpointOpts.contentRetention, "content-retention", "", "Deprecated no-op; Beacon always captures full content subject to redaction and size limits")
+	_ = endpointInstallCmd.Flags().MarkHidden("content-retention")
+	_ = endpointInstallCmd.Flags().MarkDeprecated("content-retention", "Beacon now always captures full content; this flag is ignored")
 	registerSplunkFlags(endpointInstallCmd)
 	registerFalconFlags(endpointInstallCmd)
 	endpointRepairCmd.Flags().StringVar(&endpointOpts.harnesses, "harness", "claude,codex", "Comma-separated harnesses to configure")
@@ -404,7 +397,9 @@ func init() {
 	endpointRepairCmd.Flags().BoolVar(&endpointOpts.includeCodexSpans, "include-codex-spans", false, "Include high-volume Codex OTLP spans for troubleshooting")
 	endpointRepairCmd.Flags().BoolVar(&endpointOpts.noStart, "no-start", false, "Write files without starting the launchd service")
 	endpointRepairCmd.Flags().BoolVar(&endpointOpts.dryRun, "dry-run", false, "Print planned actions without changing endpoint files or services")
-	endpointRepairCmd.Flags().StringVar(&endpointOpts.contentRetention, "content-retention", "full", "Content retention mode: metadata, redacted, or full")
+	endpointRepairCmd.Flags().StringVar(&endpointOpts.contentRetention, "content-retention", "", "Deprecated no-op; Beacon always captures full content subject to redaction and size limits")
+	_ = endpointRepairCmd.Flags().MarkHidden("content-retention")
+	_ = endpointRepairCmd.Flags().MarkDeprecated("content-retention", "Beacon now always captures full content; this flag is ignored")
 	registerSplunkFlags(endpointRepairCmd)
 	registerFalconFlags(endpointRepairCmd)
 	endpointDashboardCmd.Flags().BoolVar(&endpointOpts.userMode, "user", true, "Use per-user endpoint paths")

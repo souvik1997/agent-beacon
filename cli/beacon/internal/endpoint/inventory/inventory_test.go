@@ -37,10 +37,9 @@ GITHUB_TOKEN = "secret"
 }`)
 
 	result := Scan(Options{
-		ContentRetention: RedactionRedacted,
-		HomeDir:          home,
-		WorkingDir:       work,
-		Now:              fixedNow,
+		HomeDir:    home,
+		WorkingDir: work,
+		Now:        fixedNow,
 	})
 
 	if got, want := len(result.MCPServers), 3; got != want {
@@ -73,7 +72,7 @@ GITHUB_TOKEN = "secret"
 	}
 }
 
-func TestMetadataRedactionOmitsNamesAndPaths(t *testing.T) {
+func TestScanIncludesNamesAndPaths(t *testing.T) {
 	home := t.TempDir()
 	work := t.TempDir()
 	writeFile(t, filepath.Join(home, ".claude", "settings.json"), `{
@@ -83,25 +82,24 @@ func TestMetadataRedactionOmitsNamesAndPaths(t *testing.T) {
 }`)
 
 	result := Scan(Options{
-		ContentRetention: RedactionMetadata,
-		HomeDir:          home,
-		WorkingDir:       work,
-		Now:              fixedNow,
+		HomeDir:    home,
+		WorkingDir: work,
+		Now:        fixedNow,
 	})
 
 	if len(result.MCPServers) != 1 {
 		t.Fatalf("MCPServers len = %d, want 1", len(result.MCPServers))
 	}
 	server := result.MCPServers[0]
-	if server.ServerName != "" || server.CommandName != "" || server.SourcePath != "" || len(server.EnvKeys) != 0 {
-		t.Fatalf("metadata server leaked redacted fields: %#v", server)
+	if server.ServerName != "filesystem" || server.CommandName != "npx" || server.SourcePath == "" || len(server.EnvKeys) != 1 {
+		t.Fatalf("server missing full inventory fields: %#v", server)
 	}
 	if server.ServerNameHash == "" || server.CommandNameHash == "" || server.SourcePathHash == "" || server.DefinitionHash == "" {
-		t.Fatalf("metadata server missing hashes: %#v", server)
+		t.Fatalf("server missing hashes: %#v", server)
 	}
 	for _, config := range result.Configs {
-		if config.Exists && config.Path != "" {
-			t.Fatalf("metadata config leaked path: %#v", config)
+		if config.Exists && config.Path == "" {
+			t.Fatalf("config missing path: %#v", config)
 		}
 	}
 }
@@ -116,10 +114,9 @@ command = "gh"
 `)
 
 	result := Scan(Options{
-		ContentRetention: RedactionRedacted,
-		HomeDir:          home,
-		WorkingDir:       work,
-		Now:              fixedNow,
+		HomeDir:    home,
+		WorkingDir: work,
+		Now:        fixedNow,
 	})
 
 	var malformedFound bool
@@ -139,10 +136,9 @@ command = "gh"
 
 func TestMissingCandidatesAreReportedAsNotFound(t *testing.T) {
 	result := Scan(Options{
-		ContentRetention: RedactionRedacted,
-		HomeDir:          t.TempDir(),
-		WorkingDir:       t.TempDir(),
-		Now:              fixedNow,
+		HomeDir:    t.TempDir(),
+		WorkingDir: t.TempDir(),
+		Now:        fixedNow,
 	})
 	if len(result.Configs) == 0 {
 		t.Fatal("expected candidate config results")
@@ -166,10 +162,9 @@ func TestScanIncludesAllSupportedCurrentUserAndProjectConfigs(t *testing.T) {
 	t.Setenv("SHELL", "/bin/bash")
 
 	result := Scan(Options{
-		ContentRetention: RedactionRedacted,
-		HomeDir:          home,
-		WorkingDir:       work,
-		Now:              fixedNow,
+		HomeDir:    home,
+		WorkingDir: work,
+		Now:        fixedNow,
 	})
 
 	expected := []candidate{
@@ -234,10 +229,9 @@ mcpServers:
 	writeFile(t, filepath.Join(home, ".zshrc"), `export OTEL_TELEMETRY_ENDPOINT=http://127.0.0.1:4318`)
 
 	result := Scan(Options{
-		ContentRetention: RedactionRedacted,
-		HomeDir:          home,
-		WorkingDir:       work,
-		Now:              fixedNow,
+		HomeDir:    home,
+		WorkingDir: work,
+		Now:        fixedNow,
 	})
 
 	assertServer(t, result.MCPServers, "hermes", "memory", TransportStdio, true, 1, 0, 0)
@@ -325,10 +319,9 @@ func TestCopilotManagedDetectionFalsePositives(t *testing.T) {
 			writeFile(t, filepath.Join(home, ".zshrc"), tc.content)
 
 			result := Scan(Options{
-				ContentRetention: RedactionRedacted,
-				HomeDir:          home,
-				WorkingDir:       work,
-				Now:              fixedNow,
+				HomeDir:    home,
+				WorkingDir: work,
+				Now:        fixedNow,
 			})
 
 			copilotProfile := findConfig(result.Configs, "copilot_cli", filepath.Join(home, ".zshrc"))

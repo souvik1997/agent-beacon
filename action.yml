@@ -25,10 +25,6 @@ inputs:
       beacon-otelcol collector must sit beside it.
     required: false
     default: ""
-  content-retention:
-    description: "Content retention mode: full, metadata, or redacted."
-    required: false
-    default: "full"
   min-events:
     description: "Minimum Beacon events required for telemetry validation to pass."
     required: false
@@ -145,7 +141,6 @@ runs:
       env:
         BEACON_BIN: ${{ steps.resolve.outputs.beacon-bin }}
         INPUT_COMMAND: ${{ inputs.command }}
-        INPUT_CONTENT_RETENTION: ${{ inputs.content-retention }}
         INPUT_MIN_EVENTS: ${{ inputs.min-events }}
         INPUT_REQUIRE_TELEMETRY: ${{ inputs.require-telemetry }}
         INPUT_FORWARD: ${{ inputs.forward }}
@@ -161,7 +156,6 @@ runs:
 
         args=(ci exec
           --log-path "${log_path}"
-          --content-retention "${INPUT_CONTENT_RETENTION}"
           --min-events "${INPUT_MIN_EVENTS}"
           "--require-telemetry=${INPUT_REQUIRE_TELEMETRY}"
         )

@@ -37,8 +37,11 @@ func TestRulesCoverAgentWorkflowActions(t *testing.T) {
 		}
 	}
 	sample := mustRead("pack/sample-event.jsonl")
-	if !strings.Contains(sample, `"content":{"retention":"full","included":true}`) {
-		t.Fatalf("sample event missing full retention: %s", sample)
+	if !strings.Contains(sample, `"action":"command.executed"`) {
+		t.Fatalf("sample event missing command action: %s", sample)
+	}
+	if strings.Contains(sample, `"content":{"retention"`) {
+		t.Fatalf("sample event should not include retention marker: %s", sample)
 	}
 }
 

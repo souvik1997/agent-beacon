@@ -38,18 +38,17 @@ type doctorResult struct {
 }
 
 type inventoryResult struct {
-	GeneratedAt       string                          `json:"generated_at"`
-	RuntimeLog        lifecycle.RuntimeLogSource      `json:"runtime_log"`
-	ConfigPath        string                          `json:"config_path"`
-	LogPath           string                          `json:"log_path"`
-	ContentRetention  endpointconfig.ContentRetention `json:"content_retention"`
-	Harnesses         []harness.Harness               `json:"harnesses"`
-	Hooks             map[string]hookTargetResult     `json:"hooks,omitempty"`
-	Destinations      lifecycle.DestinationStatus     `json:"destinations"`
-	LastEventObserved bool                            `json:"last_event_observed"`
-	Configs           []endpointinventory.Config      `json:"configs,omitempty"`
-	MCPServers        []endpointinventory.MCPServer   `json:"mcp_servers,omitempty"`
-	UserScope         endpointinventory.UserScope     `json:"user_scope"`
+	GeneratedAt       string                        `json:"generated_at"`
+	RuntimeLog        lifecycle.RuntimeLogSource    `json:"runtime_log"`
+	ConfigPath        string                        `json:"config_path"`
+	LogPath           string                        `json:"log_path"`
+	Harnesses         []harness.Harness             `json:"harnesses"`
+	Hooks             map[string]hookTargetResult   `json:"hooks,omitempty"`
+	Destinations      lifecycle.DestinationStatus   `json:"destinations"`
+	LastEventObserved bool                          `json:"last_event_observed"`
+	Configs           []endpointinventory.Config    `json:"configs,omitempty"`
+	MCPServers        []endpointinventory.MCPServer `json:"mcp_servers,omitempty"`
+	UserScope         endpointinventory.UserScope   `json:"user_scope"`
 }
 
 type hookTargetResult struct {
@@ -211,13 +210,12 @@ func runEndpointInventory(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	configInventory := endpointinventory.Scan(endpointinventory.Options{ContentRetention: string(effectiveCfg.ContentRetention)})
+	configInventory := endpointinventory.Scan(endpointinventory.Options{})
 	result := inventoryResult{
 		GeneratedAt:       time.Now().UTC().Format(time.RFC3339),
 		RuntimeLog:        status.RuntimeLog,
 		ConfigPath:        status.ConfigPath,
 		LogPath:           status.LogPath,
-		ContentRetention:  effectiveCfg.ContentRetention,
 		Harnesses:         status.Harnesses,
 		Hooks:             hookStatusesWithConfig(hookTargetNames, effectiveCfg),
 		Destinations:      status.Destinations,
@@ -264,7 +262,6 @@ func runEndpointInventory(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Printf("Config: %s\n", result.ConfigPath)
 	fmt.Printf("Runtime log: %s\n", result.LogPath)
-	fmt.Printf("Content retention: %s\n", result.ContentRetention)
 	for _, h := range result.Harnesses {
 		if !endpointOpts.allTargets && !h.Detected {
 			continue
@@ -316,11 +313,6 @@ func writeInventoryEvents(cfg endpointconfig.Config, result endpointinventory.Re
 			},
 			Message: fmt.Sprintf("%s config inventory observed", config.Runtime),
 		})
-		event.Content = &schema.ContentInfo{
-			Retention: string(cfg.ContentRetention),
-			Included:  cfg.ContentRetention != endpointconfig.ContentRetentionMetadata,
-			Redacted:  cfg.ContentRetention == endpointconfig.ContentRetentionRedacted,
-		}
 		event.Raw = map[string]interface{}{
 			"inventory": map[string]interface{}{
 				"config":      config,
@@ -423,28 +415,10 @@ func runEndpointConfigShow(cmd *cobra.Command, args []string) error {
 
 func runEndpointConfigValidate(cmd *cobra.Command, args []string) error {
 	cfg := loadOrDefaultConfig()
-	if err := endpointconfig.ValidateContentRetention(cfg.ContentRetention); err != nil {
-		return err
-	}
 	if err := endpointconfig.ValidateDestinations(cfg.Destinations); err != nil {
 		return err
 	}
 	fmt.Printf("Endpoint config is valid: %s\n", endpointconfig.ConfigPath(cfg.UserMode))
-	return nil
-}
-
-func runEndpointConfigSetRetention(cmd *cobra.Command, args []string) error {
-	mode := endpointconfig.ContentRetention(args[0])
-	if err := endpointconfig.ValidateContentRetention(mode); err != nil {
-		return err
-	}
-	cfg := loadOrDefaultConfig()
-	cfg.ContentRetention = mode
-	path, err := endpointconfig.Save(cfg)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Content retention set to %s in %s\n", mode, path)
 	return nil
 }
 

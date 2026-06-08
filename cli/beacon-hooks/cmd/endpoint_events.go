@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/config"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/logging"
 )
 
@@ -97,9 +96,7 @@ func diffFields(filePath, diffStr string) map[string]interface{} {
 		sum := sha256.Sum256([]byte(diffStr))
 		file["diff_hash"] = hex.EncodeToString(sum[:])
 		file["diff_bytes"] = len(diffStr)
-		if config.ContentRetentionMode() != config.ContentRetentionMetadata {
-			file["diff"] = diffStr
-		}
+		file["diff"] = diffStr
 	}
 	return map[string]interface{}{"file": file}
 }

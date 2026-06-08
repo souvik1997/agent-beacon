@@ -147,7 +147,7 @@ func TestPackREADMEMentionsS3SetupAndProductionForwarding(t *testing.T) {
 		"vector.toml",
 		"customer-managed host-agent",
 		"without a Vector wrapper",
-		"content retention",
+		"Content Handling",
 		"/var/log/beacon-agent/runtime.jsonl",
 		"Beacon does not store AWS credentials",
 		"server-side encryption",

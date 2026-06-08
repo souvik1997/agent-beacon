@@ -21,7 +21,6 @@
         { "name": "Repository", "type": "string" },
         { "name": "Branch", "type": "string" },
         { "name": "Message", "type": "string" },
-        { "name": "ContentRetention", "type": "string" },
         { "name": "RawData", "type": "dynamic" }
       ]
     }

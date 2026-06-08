@@ -155,7 +155,6 @@ exporters:
     rotate_bytes: 10485760
     rotate_archives: 5
     redact_secrets: true
-    content_retention: %q
 %s
 extensions:
   health_check:
@@ -179,7 +178,7 @@ service:
       receivers: [otlp]
       processors: [memory_limiter, batch]
       exporters: %s
-`, cfg.Collector.GRPCPort, cfg.Collector.HTTPPort, cfg.LogPath, cfg.ContentRetention, runtimeMetricsYAML+codexSpansYAML+splunkExporter+falconExporter, exporters, exporters, exporters)
+`, cfg.Collector.GRPCPort, cfg.Collector.HTTPPort, cfg.LogPath, runtimeMetricsYAML+codexSpansYAML+splunkExporter+falconExporter, exporters, exporters, exporters)
 }
 
 func splunkHECYAML(cfg endpointconfig.Config) string {
@@ -221,7 +220,6 @@ func falconHECYAML(cfg endpointconfig.Config) string {
 	fmt.Fprintf(&b, "  falcon_hec:\n")
 	fmt.Fprintf(&b, "    token: %q\n", falcon.Token)
 	fmt.Fprintf(&b, "    endpoint: %q\n", falcon.Endpoint)
-	fmt.Fprintf(&b, "    content_retention: %q\n", cfg.ContentRetention)
 	if cfg.Collector.IncludeRuntimeMetrics {
 		fmt.Fprintf(&b, "    include_runtime_metrics: true\n")
 	}

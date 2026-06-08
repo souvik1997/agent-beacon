@@ -145,8 +145,8 @@ explain why.
 - **Protect event contracts:** Keep `vendor`, `product`, `schema_version`,
   required event fields, and Wazuh-compatible JSONL output stable. When adding a
   new signal, include stable identifiers, counts, or hashes alongside retained
-  raw content, and route raw fields through the configured content retention and
-  redaction behavior.
+  raw content, and route raw fields through redaction, sanitization, truncation,
+  and event-size controls.
 - **Keep the dashboard read-only:** It should inspect local status and JSONL
   events, not mutate endpoint configuration or telemetry.
 - **Write deterministic tests:** Prefer `t.TempDir()`, `t.Setenv("HOME", ...)`,

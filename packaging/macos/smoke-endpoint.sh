@@ -60,8 +60,7 @@ run_beacon endpoint install \
   --log-path "$LOG_PATH" \
   --harness claude,codex \
   --otlp-grpc-port 55317 \
-  --otlp-http-port 55318 \
-  --content-retention full
+  --otlp-http-port 55318
 
 test -f "$HOME_DIR/.beacon/endpoint/config.json"
 test -f "$HOME_DIR/.beacon/endpoint/otelcol.yaml"

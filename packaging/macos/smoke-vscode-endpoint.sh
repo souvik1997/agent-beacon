@@ -27,15 +27,15 @@ go build -o "$TMPDIR/beacon-hooks" .
 
 "$TMPDIR/beacon" endpoint integrations vscode print-config --log-path "$LOG" >/dev/null
 
-cat <<JSON | BEACON_ENDPOINT_MODE=1 BEACON_ENDPOINT_LOG="$LOG" BEACON_CONTENT_RETENTION=metadata "$TMPDIR/beacon-hooks" --platform vscode prompt-submit >/dev/null
+cat <<JSON | BEACON_ENDPOINT_MODE=1 BEACON_ENDPOINT_LOG="$LOG" "$TMPDIR/beacon-hooks" --platform vscode prompt-submit >/dev/null
 {"sessionId":"vscode-smoke","hookEventName":"UserPromptSubmit","cwd":"$WORKSPACE","prompt":"summarize this repository"}
 JSON
 
-cat <<JSON | BEACON_ENDPOINT_MODE=1 BEACON_ENDPOINT_LOG="$LOG" BEACON_CONTENT_RETENTION=metadata "$TMPDIR/beacon-hooks" --platform vscode pre-tool >/dev/null
+cat <<JSON | BEACON_ENDPOINT_MODE=1 BEACON_ENDPOINT_LOG="$LOG" "$TMPDIR/beacon-hooks" --platform vscode pre-tool >/dev/null
 {"sessionId":"vscode-smoke","hookEventName":"PreToolUse","cwd":"$WORKSPACE","tool_name":"runCommand","tool_input":{"command":"go test ./..."}}
 JSON
 
-cat <<JSON | BEACON_ENDPOINT_MODE=1 BEACON_ENDPOINT_LOG="$LOG" BEACON_CONTENT_RETENTION=metadata "$TMPDIR/beacon-hooks" --platform vscode post-tool >/dev/null
+cat <<JSON | BEACON_ENDPOINT_MODE=1 BEACON_ENDPOINT_LOG="$LOG" "$TMPDIR/beacon-hooks" --platform vscode post-tool >/dev/null
 {"sessionId":"vscode-smoke","hookEventName":"PostToolUse","cwd":"$WORKSPACE","tool_name":"runCommand","tool_input":{"command":"go test ./..."},"tool_response":"ok"}
 JSON
 

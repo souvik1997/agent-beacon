@@ -158,9 +158,8 @@ func TestRepairCollectorServiceRollsBackWhenReadinessFails(t *testing.T) {
 	collectorConfigPath := filepath.Join(home, "otelcol.yaml")
 	plistPath := filepath.Join(home, "agent.plist")
 	cfg := endpointconfig.Config{
-		UserMode:         true,
-		LogPath:          filepath.Join(home, "old-runtime.jsonl"),
-		ContentRetention: endpointconfig.ContentRetentionFull,
+		UserMode: true,
+		LogPath:  filepath.Join(home, "old-runtime.jsonl"),
 		Collector: endpointconfig.Collector{
 			ConfigPath: collectorConfigPath,
 			SpoolPath:  filepath.Join(home, "spool", "otlp.jsonl"),
@@ -666,7 +665,6 @@ func TestRobustEndpointCommandsRegistered(t *testing.T) {
 		{"bundle-diagnostics"},
 		{"config", "show"},
 		{"config", "validate"},
-		{"config", "set-retention"},
 		{"integrations", "validate"},
 	} {
 		cmd, _, err := endpointCmd.Find(path)
@@ -692,7 +690,7 @@ func TestWriteInventoryEventsAppendsConfigInventory(t *testing.T) {
 				Exists:       true,
 				Readable:     true,
 				ParserStatus: endpointinventory.StatusOK,
-				Redaction:    endpointinventory.RedactionRedacted,
+				Redaction:    endpointinventory.RedactionFull,
 			},
 			{
 				Runtime:      "cursor",
@@ -700,7 +698,7 @@ func TestWriteInventoryEventsAppendsConfigInventory(t *testing.T) {
 				Scope:        endpointinventory.ScopeUser,
 				Exists:       false,
 				ParserStatus: endpointinventory.StatusNotFound,
-				Redaction:    endpointinventory.RedactionRedacted,
+				Redaction:    endpointinventory.RedactionFull,
 			},
 		},
 		MCPServers: []endpointinventory.MCPServer{
@@ -712,7 +710,7 @@ func TestWriteInventoryEventsAppendsConfigInventory(t *testing.T) {
 				Transport:      endpointinventory.TransportStdio,
 				DefinitionHash: "sha256:def",
 				ParserStatus:   endpointinventory.StatusOK,
-				Redaction:      endpointinventory.RedactionRedacted,
+				Redaction:      endpointinventory.RedactionFull,
 			},
 		},
 	}

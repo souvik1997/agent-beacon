@@ -156,7 +156,7 @@ func TestPipelinePrivacyBeforeSinkAndNoEnvelopeMutation(t *testing.T) {
 	pipeline := NewPipeline(PipelineOptions{
 		Source:  staticSource{NewEnvelopeRecord(envelope)},
 		Sink:    sink,
-		Privacy: &PrivacyPolicy{Retention: ContentRetentionFull, MaxEventBytes: DefaultMaxEventBytes},
+		Privacy: &PrivacyPolicy{MaxEventBytes: DefaultMaxEventBytes},
 	})
 	if err := pipeline.Run(context.Background()); err != nil {
 		t.Fatalf("Run returned error: %v", err)
@@ -210,7 +210,7 @@ func TestPipelinePrivacyRunsBeforeAdditionalProcessors(t *testing.T) {
 		Source:     staticSource{NewEnvelopeRecord(envelope)},
 		Processors: []Processor{processor},
 		Sink:       sink,
-		Privacy:    &PrivacyPolicy{Retention: ContentRetentionFull},
+		Privacy:    &PrivacyPolicy{},
 	})
 	if err := pipeline.Run(context.Background()); err != nil {
 		t.Fatalf("Run returned error: %v", err)
@@ -223,53 +223,7 @@ func TestPipelinePrivacyRunsBeforeAdditionalProcessors(t *testing.T) {
 	}
 }
 
-func TestPipelineMetadataRetentionRemovesRawDetails(t *testing.T) {
-	sink := &captureEventSink{}
-	pipeline := NewPipeline(PipelineOptions{
-		Source:  staticSource{NewEnvelopeRecord(testEnvelope())},
-		Sink:    sink,
-		Privacy: &PrivacyPolicy{Retention: ContentRetentionMetadata},
-	})
-
-	if err := pipeline.Run(context.Background()); err != nil {
-		t.Fatalf("Run returned error: %v", err)
-	}
-	events, _, _ := sink.snapshot()
-	if len(events) != 1 {
-		t.Fatalf("events = %d, want 1", len(events))
-	}
-	if events[0].Raw["field_count"] != 2 {
-		t.Fatalf("metadata raw = %#v, want field_count 2", events[0].Raw)
-	}
-	if _, ok := events[0].Raw["prompt"]; ok {
-		t.Fatalf("metadata retention leaked prompt: %#v", events[0].Raw)
-	}
-	if events[0].Content == nil || events[0].Content.Retention != ContentRetentionMetadata || events[0].Content.Included {
-		t.Fatalf("content metadata not set correctly: %#v", events[0].Content)
-	}
-}
-
-func TestPipelineInvalidRetentionFailsClosed(t *testing.T) {
-	sink := &captureEventSink{}
-	pipeline := NewPipeline(PipelineOptions{
-		Source:  staticSource{NewEnvelopeRecord(testEnvelope())},
-		Sink:    sink,
-		Privacy: &PrivacyPolicy{Retention: "metdata"},
-	})
-
-	if err := pipeline.Run(context.Background()); err != nil {
-		t.Fatalf("Run returned error: %v", err)
-	}
-	events, _, _ := sink.snapshot()
-	if len(events) != 1 {
-		t.Fatalf("events = %d, want 1", len(events))
-	}
-	if events[0].Raw["field_count"] != 2 {
-		t.Fatalf("invalid retention did not fail closed: %#v", events[0].Raw)
-	}
-}
-
-func TestPipelinePrivacyDefaultRetentionIsFull(t *testing.T) {
+func TestPipelinePrivacyDoesNotSetContentMetadata(t *testing.T) {
 	sink := &captureEventSink{}
 	pipeline := NewPipeline(PipelineOptions{
 		Source:  staticSource{NewEnvelopeRecord(testEnvelope())},
@@ -284,11 +238,11 @@ func TestPipelinePrivacyDefaultRetentionIsFull(t *testing.T) {
 	if len(events) != 1 {
 		t.Fatalf("events = %d, want 1", len(events))
 	}
-	if events[0].Content == nil || events[0].Content.Retention != ContentRetentionFull || !events[0].Content.Included {
-		t.Fatalf("privacy default did not use full retention: %#v", events[0].Content)
+	if events[0].Content != nil {
+		t.Fatalf("privacy unexpectedly set content metadata: %#v", events[0].Content)
 	}
 	if events[0].Raw["prompt"] != "summarize" {
-		t.Fatalf("full retention unexpectedly removed raw: %#v", events[0].Raw)
+		t.Fatalf("privacy unexpectedly removed raw: %#v", events[0].Raw)
 	}
 }
 

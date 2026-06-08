@@ -35,9 +35,8 @@ type Harness struct {
 }
 
 type ConfigureOptions struct {
-	Endpoint         string
-	UserMode         bool
-	ContentRetention string
+	Endpoint string
+	UserMode bool
 }
 
 type ValidationResult struct {
@@ -309,11 +308,7 @@ func ConfigureClaude(opts ConfigureOptions) (string, error) {
 	env["OTEL_METRICS_EXPORTER"] = "otlp"
 	env["OTEL_EXPORTER_OTLP_PROTOCOL"] = "grpc"
 	env["OTEL_EXPORTER_OTLP_ENDPOINT"] = opts.Endpoint
-	if opts.ContentRetention == "metadata" {
-		delete(env, "OTEL_LOG_USER_PROMPTS")
-	} else {
-		env["OTEL_LOG_USER_PROMPTS"] = "1"
-	}
+	env["OTEL_LOG_USER_PROMPTS"] = "1"
 	settings["env"] = env
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return "", err
@@ -338,7 +333,7 @@ func ConfigureCodex(opts ConfigureOptions) (string, error) {
 			return "", err
 		}
 	}
-	updated := mergeCodexOTELWithPrompt(existing, opts.Endpoint, opts.ContentRetention != "metadata")
+	updated := mergeCodexOTELWithPrompt(existing, opts.Endpoint, true)
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return "", err
 	}

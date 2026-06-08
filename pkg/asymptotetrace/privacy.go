@@ -98,13 +98,6 @@ func SanitizeSlice(input []interface{}, opts PrivacyOptions) []interface{} {
 	return out
 }
 
-func RetentionAwareRaw(raw map[string]interface{}, retention string) map[string]interface{} {
-	if retention != ContentRetentionMetadata {
-		return raw
-	}
-	return map[string]interface{}{"field_count": len(raw)}
-}
-
 func SanitizeEvent(event Event, maxBytes int) Event {
 	event.Message = CleanString(event.Message, DefaultStringLimit, true)
 	if event.Tool != nil {

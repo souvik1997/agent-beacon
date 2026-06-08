@@ -33,15 +33,14 @@ var (
 )
 
 type Options struct {
-	BaseDir          string
-	LogPath          string
-	WorkDir          string
-	CollectorPath    string
-	GRPCPort         int
-	HTTPPort         int
-	Harness          string
-	ContentRetention endpointconfig.ContentRetention
-	KeepArtifacts    bool
+	BaseDir       string
+	LogPath       string
+	WorkDir       string
+	CollectorPath string
+	GRPCPort      int
+	HTTPPort      int
+	Harness       string
+	KeepArtifacts bool
 	// Forward selects an optional SIEM forwarder ("splunk" or "falcon") for the
 	// ephemeral collector. ForwardEndpoint supplies the destination URL; the
 	// token is read from the environment only.
@@ -85,12 +84,6 @@ func Provision(opts Options) (*Session, error) {
 	if err := validateHarness(opts.Harness); err != nil {
 		return nil, err
 	}
-	if opts.ContentRetention == "" {
-		opts.ContentRetention = endpointconfig.ContentRetentionFull
-	}
-	if err := endpointconfig.ValidateContentRetention(opts.ContentRetention); err != nil {
-		return nil, err
-	}
 	baseDir, err := resolveBaseDir(opts.BaseDir, opts.LogPath)
 	if err != nil {
 		return nil, err
@@ -114,7 +107,6 @@ func Provision(opts Options) (*Session, error) {
 	}
 	cfg := endpointconfig.Default(true, logPath)
 	cfg.Harnesses = []string{DefaultHarness}
-	cfg.ContentRetention = opts.ContentRetention
 	cfg.Collector.BinaryPath = opts.CollectorPath
 	cfg.Collector.ConfigPath = filepath.Join(baseDir, "otelcol.yaml")
 	cfg.Collector.SpoolPath = filepath.Join(baseDir, "spool", "otlp.jsonl")
@@ -252,7 +244,7 @@ func (s *Session) RunChild(ctx context.Context, args []string, stdout, stderr io
 	}
 	cmd := childCommandContext(ctx, args[0], args[1:]...)
 	cmd.Dir = s.WorkDir
-	env := append(WithCIResourceAttributes(ClaudeEnv(os.Environ(), s.GRPCEndpoint, s.cfg.ContentRetention), s.Run),
+	env := append(WithCIResourceAttributes(ClaudeEnv(os.Environ(), s.GRPCEndpoint), s.Run),
 		"BEACON_CI_BASE_DIR="+s.BaseDir,
 		"BEACON_CI_CONFIG_PATH="+s.ConfigPath,
 		"BEACON_CI_LOG_PATH="+s.LogPath,

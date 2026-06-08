@@ -86,7 +86,7 @@ func TestPackREADMEMentionsValidationRetentionAndMacOSPermissions(t *testing.T) 
 		"beacon endpoint datadog validate",
 		"service:beacon-endpoint-agent",
 		"Beacon endpoint datadog validation event",
-		"content retention",
+		"Content Handling",
 		"_dd-agent",
 		"/var/log/beacon-agent/runtime.jsonl",
 	} {

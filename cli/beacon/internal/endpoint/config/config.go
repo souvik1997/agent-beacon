@@ -21,22 +21,13 @@ const (
 	DefaultFalconSourcetype = "json"
 )
 
-type ContentRetention string
-
-const (
-	ContentRetentionMetadata ContentRetention = "metadata"
-	ContentRetentionRedacted ContentRetention = "redacted"
-	ContentRetentionFull     ContentRetention = "full"
-)
-
 type Config struct {
-	UserMode         bool             `json:"user_mode"`
-	LogPath          string           `json:"log_path"`
-	Collector        Collector        `json:"collector"`
-	Harnesses        []string         `json:"harnesses"`
-	EventCategories  []string         `json:"event_categories,omitempty"`
-	ContentRetention ContentRetention `json:"content_retention"`
-	Destinations     *Destinations    `json:"destinations,omitempty"`
+	UserMode        bool          `json:"user_mode"`
+	LogPath         string        `json:"log_path"`
+	Collector       Collector     `json:"collector"`
+	Harnesses       []string      `json:"harnesses"`
+	EventCategories []string      `json:"event_categories,omitempty"`
+	Destinations    *Destinations `json:"destinations,omitempty"`
 }
 
 type Collector struct {
@@ -79,10 +70,9 @@ type FalconHEC struct {
 func Default(userMode bool, logPath string) Config {
 	base := BaseDir(userMode)
 	return Config{
-		UserMode:         userMode,
-		LogPath:          logPath,
-		Harnesses:        []string{"claude", "codex"},
-		ContentRetention: ContentRetentionFull,
+		UserMode:  userMode,
+		LogPath:   logPath,
+		Harnesses: []string{"claude", "codex"},
 		Collector: Collector{
 			ConfigPath: filepath.Join(base, "otelcol.yaml"),
 			GRPCPort:   DefaultGRPCPort,
@@ -124,12 +114,6 @@ func Load(userMode bool) (Config, error) {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return Config{}, err
 	}
-	if cfg.ContentRetention == "" {
-		cfg.ContentRetention = ContentRetentionFull
-	}
-	if err := ValidateContentRetention(cfg.ContentRetention); err != nil {
-		return Config{}, err
-	}
 	NormalizeDestinations(&cfg)
 	if err := ValidateDestinations(cfg.Destinations); err != nil {
 		return Config{}, err
@@ -138,12 +122,6 @@ func Load(userMode bool) (Config, error) {
 }
 
 func Save(cfg Config) (string, error) {
-	if cfg.ContentRetention == "" {
-		cfg.ContentRetention = ContentRetentionFull
-	}
-	if err := ValidateContentRetention(cfg.ContentRetention); err != nil {
-		return "", err
-	}
 	NormalizeDestinations(&cfg)
 	if err := ValidateDestinations(cfg.Destinations); err != nil {
 		return "", err
@@ -167,15 +145,6 @@ func Save(cfg Config) (string, error) {
 		return path, os.Chmod(path, perm)
 	}
 	return path, nil
-}
-
-func ValidateContentRetention(mode ContentRetention) error {
-	switch mode {
-	case "", ContentRetentionMetadata, ContentRetentionRedacted, ContentRetentionFull:
-		return nil
-	default:
-		return fmt.Errorf("content retention must be metadata, redacted, or full")
-	}
 }
 
 func NormalizeDestinations(cfg *Config) {

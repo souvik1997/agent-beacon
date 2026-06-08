@@ -141,9 +141,8 @@ _sourceCategory=security/agentbeacon product=agentbeacon telemetry=ai_agent
 _sourceCategory=security/agentbeacon "Beacon endpoint Sumo validation event"
 ```
 
-## Content Retention
+## Content Handling
 
-Beacon content retention defaults to `full`, so prompt text, tool input, command
-output, raw tool payloads, and other retained content may be forwarded to Sumo.
-Use Beacon's `metadata` or `redacted` content retention modes for stricter
-deployments.
+Beacon forwards retained prompt text, tool input, command output, raw tool
+payloads, and related local telemetry to Sumo subject to Beacon's secret
+redaction, sanitization, truncation, and event-size limits.

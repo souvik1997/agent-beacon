@@ -125,9 +125,8 @@ You can also confirm normalized Beacon fields are present:
 vendor=beacon product=endpoint-agent destination.type=rapid7
 ```
 
-## Content Retention
+## Content Handling
 
-Beacon content retention defaults to `full`, so prompt text, tool input, command
-output, raw tool payloads, and other retained content may be forwarded to
-Rapid7. Use Beacon's `metadata` or `redacted` content retention modes for
-stricter deployments.
+Beacon forwards retained prompt text, tool input, command output, raw tool
+payloads, and related local telemetry to Rapid7 subject to Beacon's secret
+redaction, sanitization, truncation, and event-size limits.

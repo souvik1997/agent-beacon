@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/config"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/logging"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/state"
 )
@@ -53,7 +52,7 @@ func runPromptSubmit(cmd *cobra.Command, args []string) {
 		prompt = cascadePrompt(input)
 	}
 	hasPrompt := prompt != ""
-	if hasPrompt && config.ContentRetentionMode() != config.ContentRetentionMetadata {
+	if hasPrompt {
 		fields["prompt"] = map[string]interface{}{"text": prompt}
 	}
 	emitHookEvent(logger, "prompt.submitted", "prompt", "info", "Prompt submitted to agent", input, fields)

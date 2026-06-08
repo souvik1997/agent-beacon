@@ -48,16 +48,13 @@ const (
 	StatusUnreadable  = "unreadable"
 	StatusUnsupported = "unsupported"
 
-	RedactionMetadata = "metadata"
-	RedactionRedacted = "redacted"
-	RedactionFull     = "full"
+	RedactionFull = "full"
 )
 
 type Options struct {
-	ContentRetention string
-	HomeDir          string
-	WorkingDir       string
-	Now              func() time.Time
+	HomeDir    string
+	WorkingDir string
+	Now        func() time.Time
 }
 
 type Result struct {
@@ -122,7 +119,7 @@ type candidate struct {
 }
 
 func Scan(opts Options) Result {
-	redaction := normalizeRedaction(opts.ContentRetention)
+	redaction := RedactionFull
 	home := opts.HomeDir
 	if home == "" {
 		home, _ = os.UserHomeDir()
@@ -480,35 +477,15 @@ func dedupeServers(servers []MCPServer) []MCPServer {
 	return out
 }
 
-func normalizeRedaction(retention string) string {
-	switch retention {
-	case RedactionMetadata:
-		return RedactionMetadata
-	case RedactionFull:
-		return RedactionFull
-	default:
-		return RedactionRedacted
-	}
-}
-
 func valueForPath(value, redaction string) string {
-	if redaction == RedactionMetadata {
-		return ""
-	}
 	return value
 }
 
 func valueForName(value, redaction string) string {
-	if redaction == RedactionMetadata {
-		return ""
-	}
 	return value
 }
 
 func valuesForEnvKeys(keys []string, redaction string) []string {
-	if redaction != RedactionRedacted && redaction != RedactionFull {
-		return nil
-	}
 	out := make([]string, 0, len(keys))
 	for _, key := range keys {
 		if safeEnvKey(key) {

@@ -47,9 +47,6 @@ func newExporter(raw component.Config, set exporter.Settings) (*falconExporter, 
 	if cfg.Timeout == 0 {
 		cfg.Timeout = defaultTimeout
 	}
-	if cfg.ContentRetention == "" {
-		cfg.ContentRetention = "full"
-	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -62,7 +59,6 @@ func newExporter(raw component.Config, set exporter.Settings) (*falconExporter, 
 		client: client,
 		logger: set.Logger,
 		converter: beaconevent.NewConverter(beaconevent.Options{
-			ContentRetention:      cfg.ContentRetention,
 			IncludeRuntimeMetrics: cfg.IncludeRuntimeMetrics,
 			IncludeCodexSpans:     cfg.IncludeCodexSpans,
 		}),

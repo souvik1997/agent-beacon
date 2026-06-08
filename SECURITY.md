@@ -13,7 +13,7 @@ For the full enterprise review package, see the
 | Area | Default behavior |
 | --- | --- |
 | Collection | Local OpenTelemetry receivers on `127.0.0.1` or local `beacon-hooks` adapter execution |
-| Content retention | Configurable as `metadata`, `redacted`, or `full` |
+| Content handling | Retained local telemetry is subject to secret redaction, sanitization, truncation, and event-size limits |
 | Forwarding | Optional and customer configured |
 | Hosted dependency | None required for normal endpoint collection or hook execution |
 | Removal | Endpoint uninstall removes managed service and configuration files, with explicit flags to keep logs or config |
@@ -34,20 +34,20 @@ Read the full
 Beacon writes normalized endpoint events only when a supported runtime provides
 telemetry through a configured local surface. Required event fields identify the
 event, endpoint, and harness; optional entities add session, tool, command,
-file, approval, MCP-like, prompt, content, destination, and health context when
-available and allowed by retention settings.
+file, approval, MCP-like, prompt, destination, and health context when
+available.
 
 Review the full
 [data inventory](https://docs.asymptotelabs.ai/cli/security-review-data-inventory).
 
-## Retention and Redaction
+## Redaction and Size Limits
 
-Content retention controls how much prompt text, command output, raw attributes,
-tool input, and diff content Beacon can write to local JSONL. Use `metadata` to
-exclude retained content, `redacted` to apply local redaction and size limits, or
-`full` only when full local or customer-controlled content capture is approved.
+Beacon may write prompt text, command output, raw attributes, tool input, and
+diff content to local JSONL. Secret redaction, sanitization, truncation, and
+event-size limits are applied before events are written or forwarded through
+supported customer-managed destinations.
 
-Compare the retention modes in
+Review the controls in
 [retention and redaction](https://docs.asymptotelabs.ai/cli/security-review-retention-redaction).
 
 ## Endpoint Operations

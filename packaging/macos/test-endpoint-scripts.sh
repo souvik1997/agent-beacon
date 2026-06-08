@@ -49,7 +49,7 @@ STUB_LOG="$STUB_LOG" \
 
 INSTALL_ARGS="$(cat "$STUB_LOG")"
 case "$INSTALL_ARGS" in
-  "endpoint install --system --harness claude,codex,cursor --content-retention full --otlp-grpc-port 5317 --otlp-http-port 5318 --collector /tmp/beacon-otelcol --splunk-hec-endpoint https://splunk.example:8088/services/collector --splunk-hec-token hec-token --splunk-index beacon --splunk-source beacon-source --splunk-sourcetype beacon:sourcetype --splunk-insecure-skip-verify --splunk-ca-file /tmp/splunk-ca.pem --falcon-hec-endpoint https://cloud.us.humio.com/api/v1/ingest/hec --falcon-hec-token falcon-token --falcon-index beacon-repo --falcon-source falcon-source --falcon-sourcetype json --falcon-insecure-skip-verify --falcon-ca-file /tmp/falcon-ca.pem") ;;
+  "endpoint install --system --harness claude,codex,cursor --otlp-grpc-port 5317 --otlp-http-port 5318 --collector /tmp/beacon-otelcol --splunk-hec-endpoint https://splunk.example:8088/services/collector --splunk-hec-token hec-token --splunk-index beacon --splunk-source beacon-source --splunk-sourcetype beacon:sourcetype --splunk-insecure-skip-verify --splunk-ca-file /tmp/splunk-ca.pem --falcon-hec-endpoint https://cloud.us.humio.com/api/v1/ingest/hec --falcon-hec-token falcon-token --falcon-index beacon-repo --falcon-source falcon-source --falcon-sourcetype json --falcon-insecure-skip-verify --falcon-ca-file /tmp/falcon-ca.pem") ;;
   *)
     echo "unexpected install args: $INSTALL_ARGS" >&2
     exit 1
@@ -67,7 +67,7 @@ STUB_LOG="$STUB_LOG" \
 
 REPAIR_ARGS="$(cat "$STUB_LOG")"
 case "$REPAIR_ARGS" in
-  "endpoint repair --collector /tmp/beacon-otelcol --harness claude,codex --content-retention full --otlp-grpc-port 4317 --otlp-http-port 4318 --splunk-hec-endpoint https://splunk.example:8088/services/collector --splunk-hec-token hec-token --falcon-hec-endpoint https://cloud.us.humio.com/api/v1/ingest/hec --falcon-hec-token falcon-token") ;;
+  "endpoint repair --collector /tmp/beacon-otelcol --harness claude,codex --otlp-grpc-port 4317 --otlp-http-port 4318 --splunk-hec-endpoint https://splunk.example:8088/services/collector --splunk-hec-token hec-token --falcon-hec-endpoint https://cloud.us.humio.com/api/v1/ingest/hec --falcon-hec-token falcon-token") ;;
   *)
     echo "unexpected repair args: $REPAIR_ARGS" >&2
     exit 1
@@ -122,11 +122,11 @@ esac
 
 BEACON_BIN="$STUB_BIN" \
 STUB_LOG="$STUB_LOG" \
-"$INSTALL_SCRIPT" _ _ _ "claude" "metadata" "6317" "6318" "/tmp/jamf-otelcol" "1" "https://jamf-splunk.example:8088/services/collector" "jamf-token" "jamf-index" "jamf-source" "jamf:sourcetype" "true" "/tmp/jamf-ca.pem"
+"$INSTALL_SCRIPT" _ _ _ "claude" "6317" "6318" "/tmp/jamf-otelcol" "1" "https://jamf-splunk.example:8088/services/collector" "jamf-token" "jamf-index" "jamf-source" "jamf:sourcetype" "true" "/tmp/jamf-ca.pem"
 
 INSTALL_ARGS="$(cat "$STUB_LOG")"
 case "$INSTALL_ARGS" in
-  "endpoint install --system --harness claude --content-retention metadata --otlp-grpc-port 6317 --otlp-http-port 6318 --collector /tmp/jamf-otelcol --splunk-hec-endpoint https://jamf-splunk.example:8088/services/collector --splunk-hec-token jamf-token --splunk-index jamf-index --splunk-source jamf-source --splunk-sourcetype jamf:sourcetype --splunk-insecure-skip-verify --splunk-ca-file /tmp/jamf-ca.pem --no-start") ;;
+  "endpoint install --system --harness claude --otlp-grpc-port 6317 --otlp-http-port 6318 --collector /tmp/jamf-otelcol --splunk-hec-endpoint https://jamf-splunk.example:8088/services/collector --splunk-hec-token jamf-token --splunk-index jamf-index --splunk-source jamf-source --splunk-sourcetype jamf:sourcetype --splunk-insecure-skip-verify --splunk-ca-file /tmp/jamf-ca.pem --no-start") ;;
   *)
     echo "unexpected Jamf positional install args: $INSTALL_ARGS" >&2
     exit 1
@@ -164,11 +164,11 @@ esac
 BEACON_BIN="$STUB_BIN" \
 BEACON_INSTALL_SCRIPT="$INSTALL_SCRIPT" \
 STUB_LOG="$STUB_LOG" \
-"$ROOT_DIR/packaging/macos/fleet/scripts/install.sh" "cursor" "redacted" "7317" "7318" "/tmp/fleet-otelcol" "1" "https://fleet-splunk.example:8088/services/collector" "fleet-token" "fleet-index" "fleet-source" "fleet:sourcetype" "1" "/tmp/fleet-ca.pem"
+"$ROOT_DIR/packaging/macos/fleet/scripts/install.sh" "cursor" "7317" "7318" "/tmp/fleet-otelcol" "1" "https://fleet-splunk.example:8088/services/collector" "fleet-token" "fleet-index" "fleet-source" "fleet:sourcetype" "1" "/tmp/fleet-ca.pem"
 
 INSTALL_ARGS="$(cat "$STUB_LOG")"
 case "$INSTALL_ARGS" in
-  "endpoint install --system --harness cursor --content-retention redacted --otlp-grpc-port 7317 --otlp-http-port 7318 --collector /tmp/fleet-otelcol --splunk-hec-endpoint https://fleet-splunk.example:8088/services/collector --splunk-hec-token fleet-token --splunk-index fleet-index --splunk-source fleet-source --splunk-sourcetype fleet:sourcetype --splunk-insecure-skip-verify --splunk-ca-file /tmp/fleet-ca.pem --no-start") ;;
+  "endpoint install --system --harness cursor --otlp-grpc-port 7317 --otlp-http-port 7318 --collector /tmp/fleet-otelcol --splunk-hec-endpoint https://fleet-splunk.example:8088/services/collector --splunk-hec-token fleet-token --splunk-index fleet-index --splunk-source fleet-source --splunk-sourcetype fleet:sourcetype --splunk-insecure-skip-verify --splunk-ca-file /tmp/fleet-ca.pem --no-start") ;;
   *)
     echo "unexpected Fleet positional install args: $INSTALL_ARGS" >&2
     exit 1
@@ -184,11 +184,11 @@ BEACON_FALCON_HEC_ENDPOINT="https://cloud.us.humio.com/api/v1/ingest/hec" \
 BEACON_FALCON_HEC_TOKEN="falcon-token" \
 BEACON_FALCON_INDEX="beacon-repo" \
 STUB_LOG="$STUB_LOG" \
-"$FLEET_REPAIR_SCRIPT" "claude,cursor" "metadata" "8317" "8318"
+"$FLEET_REPAIR_SCRIPT" "claude,cursor" "8317" "8318"
 
 REPAIR_ARGS="$(cat "$STUB_LOG")"
 case "$REPAIR_ARGS" in
-  "endpoint repair --collector /tmp/beacon-otelcol --harness claude,cursor --content-retention metadata --otlp-grpc-port 8317 --otlp-http-port 8318 --splunk-hec-endpoint https://splunk.example:8088/services/collector --splunk-hec-token hec-token --splunk-index beacon --falcon-hec-endpoint https://cloud.us.humio.com/api/v1/ingest/hec --falcon-hec-token falcon-token --falcon-index beacon-repo") ;;
+  "endpoint repair --collector /tmp/beacon-otelcol --harness claude,cursor --otlp-grpc-port 8317 --otlp-http-port 8318 --splunk-hec-endpoint https://splunk.example:8088/services/collector --splunk-hec-token hec-token --splunk-index beacon --falcon-hec-endpoint https://cloud.us.humio.com/api/v1/ingest/hec --falcon-hec-token falcon-token --falcon-index beacon-repo") ;;
   *)
     echo "unexpected Fleet positional repair args: $REPAIR_ARGS" >&2
     exit 1
@@ -218,7 +218,6 @@ cat >"$CONFIG_PATH" <<'JSON'
     "claude",
     "codex"
   ],
-  "content_retention": "full",
   "destinations": {
     "splunk_hec": {
       "enabled": true,
@@ -228,15 +227,6 @@ cat >"$CONFIG_PATH" <<'JSON'
   }
 }
 JSON
-
-RETENTION="$(BEACON_ENDPOINT_CONFIG="$CONFIG_PATH" "$ROOT_DIR/packaging/macos/jamf/extension-attributes/content-retention.sh")"
-case "$RETENTION" in
-  "<result>full</result>") ;;
-  *)
-    echo "unexpected retention extension attribute result: $RETENTION" >&2
-    exit 1
-    ;;
-esac
 
 HARNESSES="$(BEACON_ENDPOINT_CONFIG="$CONFIG_PATH" "$ROOT_DIR/packaging/macos/jamf/extension-attributes/configured-harnesses.sh")"
 case "$HARNESSES" in

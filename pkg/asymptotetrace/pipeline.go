@@ -129,17 +129,10 @@ func hasPrivacyProcessor(processors []Processor) bool {
 	return false
 }
 
-func prepareEventForSink(event Event, retention string, maxBytes int) Event {
+func prepareEventForSink(event Event, maxBytes int) Event {
 	out := copyEvent(event)
-	if out.Content == nil {
-		out.Content = &ContentInfo{}
-	}
-	out.Content.Retention = retention
-	out.Content.Included = retention != ContentRetentionMetadata
-	out.Content.Redacted = retention == ContentRetentionRedacted
 	if out.Raw != nil {
 		out.Raw = SanitizeMap(out.Raw, PrivacyOptions{RedactSecrets: true, StringLimit: DefaultRawStringLimit})
-		out.Raw = RetentionAwareRaw(out.Raw, retention)
 	}
 	return SanitizeEvent(out, maxBytes)
 }
@@ -192,13 +185,4 @@ func copyEvent(event Event) Event {
 		out.Raw = copyMap(event.Raw)
 	}
 	return out
-}
-
-func validContentRetention(retention string) bool {
-	switch retention {
-	case ContentRetentionMetadata, ContentRetentionRedacted, ContentRetentionFull:
-		return true
-	default:
-		return false
-	}
 }

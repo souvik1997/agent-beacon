@@ -113,7 +113,6 @@ func TestConfigYAMLIncludesSplunkHECWhenConfigured(t *testing.T) {
 
 func TestConfigYAMLIncludesFalconHECWhenConfigured(t *testing.T) {
 	cfg := testConfig(t)
-	cfg.ContentRetention = endpointconfig.ContentRetentionRedacted
 	cfg.Collector.IncludeRuntimeMetrics = true
 	cfg.Collector.IncludeCodexSpans = true
 	cfg.Destinations = &endpointconfig.Destinations{FalconHEC: &endpointconfig.FalconHEC{
@@ -132,7 +131,6 @@ func TestConfigYAMLIncludesFalconHECWhenConfigured(t *testing.T) {
 		"falcon_hec:",
 		`token: "ingest-token"`,
 		`endpoint: "https://cloud.us.humio.com/api/v1/ingest/hec"`,
-		`content_retention: "redacted"`,
 		"include_runtime_metrics: true",
 		"include_codex_spans: true",
 		`index: "beacon-repo"`,

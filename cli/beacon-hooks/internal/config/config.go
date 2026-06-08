@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,16 +28,6 @@ const (
 	LogMaxSizeBytes   = 10 * 1024 * 1024 // 10 MB
 	LogRotateArchives = 5
 )
-
-type ContentRetention string
-
-const (
-	ContentRetentionMetadata ContentRetention = "metadata"
-	ContentRetentionRedacted ContentRetention = "redacted"
-	ContentRetentionFull     ContentRetention = "full"
-)
-
-var SystemEndpointConfigPath = "/Library/Application Support/Beacon/Endpoint/config.json"
 
 // Scannable extensions
 var scannableExtensions = map[string]bool{
@@ -194,53 +183,4 @@ func removeOverflowArchives(path string, archives int) error {
 // EnsureStateDir ensures the state directory for the given platform exists
 func EnsureStateDir(platform string) error {
 	return os.MkdirAll(GetStateDir(platform), 0755)
-}
-
-func ContentRetentionMode() ContentRetention {
-	if mode, ok := parseContentRetention(os.Getenv("BEACON_CONTENT_RETENTION")); ok {
-		return mode
-	}
-	for _, endpointPath := range endpointConfigPaths() {
-		data, err := os.ReadFile(endpointPath)
-		if err != nil {
-			continue
-		}
-		var cfg map[string]interface{}
-		if err := json.Unmarshal(data, &cfg); err != nil {
-			continue
-		}
-		if mode, ok := parseContentRetention(cfg["content_retention"]); ok {
-			return mode
-		}
-	}
-	return ContentRetentionFull
-}
-
-func endpointConfigPaths() []string {
-	if endpointPath := os.Getenv("BEACON_ENDPOINT_CONFIG"); endpointPath != "" {
-		return []string{endpointPath}
-	}
-	userPath := filepath.Join(BeaconDir, "endpoint", "config.json")
-	if usesSystemEndpointLog(os.Getenv("BEACON_ENDPOINT_LOG")) {
-		return []string{SystemEndpointConfigPath, userPath}
-	}
-	return []string{userPath, SystemEndpointConfigPath}
-}
-
-func usesSystemEndpointLog(path string) bool {
-	return strings.HasPrefix(path, "/var/log/") || strings.HasPrefix(path, "/Library/")
-}
-
-func parseContentRetention(value interface{}) (ContentRetention, bool) {
-	mode, _ := value.(string)
-	switch ContentRetention(mode) {
-	case ContentRetentionMetadata:
-		return ContentRetentionMetadata, true
-	case ContentRetentionRedacted:
-		return ContentRetentionRedacted, true
-	case ContentRetentionFull:
-		return ContentRetentionFull, true
-	default:
-		return ContentRetentionFull, false
-	}
 }

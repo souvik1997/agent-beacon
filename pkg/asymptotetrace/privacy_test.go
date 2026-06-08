@@ -43,13 +43,6 @@ func TestSanitizeMapDoesNotMutateInput(t *testing.T) {
 	}
 }
 
-func TestRetentionAwareRawMetadataMode(t *testing.T) {
-	got := RetentionAwareRaw(map[string]interface{}{"a": 1, "b": 2}, ContentRetentionMetadata)
-	if got["field_count"] != 2 {
-		t.Fatalf("field_count = %v, want 2", got["field_count"])
-	}
-}
-
 func TestSanitizeEventRedactsAndTruncates(t *testing.T) {
 	event := NewEvent(NewEventOptions{
 		Action:  "tool.invoked",

@@ -293,7 +293,6 @@ func InspectLog(logPath string) (sampledEvents, malformedLines int, archives []s
 	return len(result.Events), result.MalformedLines, archives, nil
 }
 
-
 func read(query Query) (dashboard.EventResult, error) {
 	if query.LogPath == "" {
 		return dashboard.EventResult{}, fmt.Errorf("runtime log path is required")
@@ -406,9 +405,6 @@ func contentCaveats(content *ContentSummary) []string {
 		return nil
 	}
 	var caveats []string
-	if content.Retention == schema.ContentRetentionMetadata {
-		caveats = append(caveats, "content retention is metadata; prompt/tool details may be omitted")
-	}
 	if content.Redacted {
 		caveats = append(caveats, "content was redacted")
 	}

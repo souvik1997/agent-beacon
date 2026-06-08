@@ -201,9 +201,8 @@ func TestConfigureHarnessesAcceptsGemini(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	cfg := endpointconfig.Config{
-		UserMode:         true,
-		Harnesses:        []string{"gemini"},
-		ContentRetention: endpointconfig.ContentRetentionMetadata,
+		UserMode:  true,
+		Harnesses: []string{"gemini"},
 		Collector: endpointconfig.Collector{
 			GRPCPort: 54317,
 		},
@@ -222,8 +221,8 @@ func TestConfigureHarnessesAcceptsGemini(t *testing.T) {
 		t.Fatalf("read Gemini settings: %v", err)
 	}
 	text := string(data)
-	if !strings.Contains(text, `"otlpEndpoint": "http://127.0.0.1:54317"`) || !strings.Contains(text, `"logPrompts": false`) {
-		t.Fatalf("Gemini settings were not configured for metadata retention:\n%s", text)
+	if !strings.Contains(text, `"otlpEndpoint": "http://127.0.0.1:54317"`) || !strings.Contains(text, `"logPrompts": true`) {
+		t.Fatalf("Gemini settings were not configured for local OTLP with prompt logging:\n%s", text)
 	}
 }
 
@@ -585,10 +584,9 @@ func TestConfigureHarnessesAcceptsClaude(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	cfg := endpointconfig.Config{
-		UserMode:         true,
-		Harnesses:        []string{"claude"},
-		ContentRetention: endpointconfig.ContentRetentionFull,
-		Collector:        endpointconfig.Collector{GRPCPort: 54317},
+		UserMode:  true,
+		Harnesses: []string{"claude"},
+		Collector: endpointconfig.Collector{GRPCPort: 54317},
 	}
 
 	paths, err := configureHarnesses(cfg)
@@ -642,13 +640,12 @@ func TestLoadOrDefaultFallsBackToDefaultThenLoadsSavedConfig(t *testing.T) {
 
 	// Persist a config and confirm it is loaded back.
 	saved := endpointconfig.Default(true, filepath.Join(home, "saved.jsonl"))
-	saved.ContentRetention = endpointconfig.ContentRetentionMetadata
 	if _, err := endpointconfig.Save(saved); err != nil {
 		t.Fatalf("Save returned error: %v", err)
 	}
 	loaded := loadOrDefault(true, "")
-	if loaded.ContentRetention != endpointconfig.ContentRetentionMetadata {
-		t.Fatalf("loaded ContentRetention = %q, want metadata", loaded.ContentRetention)
+	if loaded.LogPath != saved.LogPath {
+		t.Fatalf("loaded LogPath = %q, want %q", loaded.LogPath, saved.LogPath)
 	}
 	// An explicit log path overrides the saved value.
 	overridden := loadOrDefault(true, logPath)
@@ -703,7 +700,7 @@ func TestInstallRollbackTracksAndRestoresFiles(t *testing.T) {
 	rollback := newInstallRollback(service.Manager{UserMode: true})
 	rollback.Track(existing)
 	rollback.Track(created)
-	rollback.Track("") // ignored
+	rollback.Track("")       // ignored
 	rollback.Track(existing) // de-duplicated
 
 	if err := os.WriteFile(existing, []byte("after"), 0640); err != nil {
