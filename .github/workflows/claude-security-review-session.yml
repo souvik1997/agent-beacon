@@ -39,11 +39,12 @@ jobs:
           set -euo pipefail
           go install go.opentelemetry.io/collector/cmd/builder@v0.121.0
           cd collector-builder
-          builder --config builder.yaml
+          "$(go env GOPATH)/bin/builder" --config builder.yaml
           cp dist/beacon-otelcol/beacon-otelcol /tmp/beacon-session-test/beacon-otelcol
           chmod +x /tmp/beacon-session-test/beacon /tmp/beacon-session-test/beacon-otelcol
 
       - name: Start Beacon telemetry
+        id: beacon
         uses: ./
         with:
           mode: start
@@ -60,7 +61,7 @@ jobs:
           run-every-commit: true
 
       - name: Finish Beacon telemetry
-        if: always()
+        if: always() && steps.beacon.outcome == 'success'
         uses: ./
         with:
           mode: finish
