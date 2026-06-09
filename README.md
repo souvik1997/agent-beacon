@@ -9,7 +9,7 @@
   <a href="https://github.com/asymptote-labs/homebrew-tap"><img src="https://img.shields.io/badge/homebrew-beacon-fbb040?logo=homebrew" alt="Homebrew"></a>
   <a href="https://github.com/asymptote-labs/agent-beacon/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/asymptote-labs/agent-beacon/ci.yml" alt="GitHub Workflow Status"></a>
   <a href="https://github.com/asymptote-labs/agent-beacon/blob/main/LICENSE"><img src="https://img.shields.io/github/license/asymptote-labs/agent-beacon" alt="MIT license"></a>
-  <a href="https://docs.asymptotelabs.ai/cli"><img src="https://img.shields.io/badge/docs-asymptotelabs.ai-0369a1" alt="Docs"></a>
+  <a href="https://docs.asymptotelabs.ai"><img src="https://img.shields.io/badge/docs-asymptotelabs.ai-0369a1" alt="Docs"></a>
   <a href="https://discord.gg/zdNChS2fBu"><img src="https://img.shields.io/badge/discord-community-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
 
@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="https://docs.asymptotelabs.ai/cli">Docs</a>
+  <a href="https://docs.asymptotelabs.ai">Docs</a>
   ·
   <a href="https://discord.gg/zdNChS2fBu">Discord</a>
   ·
@@ -46,7 +46,7 @@ Beacon is built to be easy to deploy for Security and IT teams through
 emit agent harness telemetry logs to
 [all the major enterprise-grade SIEMs](#siem--output-destinations).
 
-Learn more in the [Agent Beacon Documentation](https://docs.asymptotelabs.ai/cli).
+Learn more in the [Agent Beacon Documentation](https://docs.asymptotelabs.ai).
 
 ## High-Level Architecture
 
@@ -174,7 +174,7 @@ long-term retention and search.
 
 ## Start Here
 
-- [Beacon CLI docs](https://docs.asymptotelabs.ai/cli) — full documentation index.
+- [Beacon CLI docs](https://docs.asymptotelabs.ai) — full documentation index.
 - [Installation](https://docs.asymptotelabs.ai/cli/installation) — install Beacon locally.
 - [For Security & IT Teams](https://docs.asymptotelabs.ai/cli/security-it-teams) — rollout, validation, and security workflows.
 - [Security review](https://docs.asymptotelabs.ai/cli/security-review) — review Beacon's architecture, data handling, and local-only posture.
@@ -215,7 +215,7 @@ make build
 ```
 
 For setup, deployment, integrations, and command details, see the
-[Beacon CLI docs](https://docs.asymptotelabs.ai/cli).
+[Beacon CLI docs](https://docs.asymptotelabs.ai).
 
 ## Star Growth
 
