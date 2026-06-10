@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Unified endpoint telemetry for AI agents, wherever they run.</strong>
+  <strong>Unified telemetry for AI agents, wherever they run.</strong>
 </p>
 
 <p align="center">
@@ -32,6 +32,10 @@
 </p>
 
 ## What is Agent Beacon
+
+<div align="center">
+  <iframe src="https://www.loom.com/embed/b39038879dc24b10af9e603ad4e03fb6?t=0s" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="width: 100%; max-width: 860px; height: 484px;"></iframe>
+</div>
 
 Agent Beacon is the world's first [open-source telemetry layer](https://justindsouza.substack.com/p/introducing-beacon-endpoint-telemetry) for AI agents wherever they run: locally, in CI, or in the cloud.
 
