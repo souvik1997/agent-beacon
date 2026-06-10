@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestObjectNamePartitionsByProviderUserRepoAndRun(t *testing.T) {
@@ -127,17 +126,6 @@ func TestUploadSendsJSONLToGCS(t *testing.T) {
 	}
 	if uploadedBody != "{\"event\":\"ok\"}\n" {
 		t.Fatalf("uploaded body = %q", uploadedBody)
-	}
-}
-
-func TestUploadRespectsInterval(t *testing.T) {
-	dir := t.TempDir()
-	statePath := filepath.Join(dir, "state.json")
-	if err := writeState(statePath, state{LastUpload: time.Now().UTC().Format(time.RFC3339), LastSize: 10}); err != nil {
-		t.Fatalf("write state: %v", err)
-	}
-	if uploadDue(Config{StatePath: statePath, Interval: time.Hour}, 11, time.Now().UTC()) {
-		t.Fatal("uploadDue = true, want false inside interval")
 	}
 }
 

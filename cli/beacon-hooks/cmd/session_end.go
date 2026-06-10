@@ -46,6 +46,9 @@ func runSessionEnd(cmd *cobra.Command, args []string) {
 		platformLogger.Info("Session ended", "platform", platformFlag)
 		emitHookEvent(platformLogger, "session.ended", "session", "info", "Agent session ended", input, sessionFields("", input))
 		uploadCloudTelemetry(platformLogger, true)
+	} else {
+		platformLogger.Info("Session ended", "platform", platformFlag)
+		uploadCloudTelemetry(platformLogger, true)
 	}
 
 	cleaned := state.CleanupStaleForPlatform(platformFlag)

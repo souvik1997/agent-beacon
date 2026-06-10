@@ -60,7 +60,6 @@ BEACON_ORIGIN=cloud
 BEACON_RUN_PROVIDER=claude_code_web
 BEACON_RUN_EPHEMERAL=true
 BEACON_CLOUD_USER_ID_HASH=<stable-user-or-test-id>
-BEACON_CLOUD_UPLOAD_INTERVAL=60s
 ```
 
 Then generate the setup script for a Beacon release and paste it into the

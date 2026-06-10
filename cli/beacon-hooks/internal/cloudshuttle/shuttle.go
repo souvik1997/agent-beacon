@@ -19,14 +19,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
 )
 
 const (
-	defaultInterval    = 60 * time.Second
 	defaultLogPath     = "/tmp/beacon/runtime.jsonl"
 	defaultStatePath   = "/tmp/beacon/shuttle-state.json"
 	defaultTokenURI    = "https://oauth2.googleapis.com/token"
@@ -42,7 +40,6 @@ type Config struct {
 	Bucket         string
 	Prefix         string
 	CredentialsB64 string
-	Interval       time.Duration
 	Provider       string
 	RunID          string
 	UserID         string
@@ -69,14 +66,6 @@ type tokenResponse struct {
 }
 
 func ConfigFromEnv() Config {
-	interval := defaultInterval
-	if raw := strings.TrimSpace(os.Getenv("BEACON_CLOUD_UPLOAD_INTERVAL")); raw != "" {
-		if raw == "0" {
-			interval = 0
-		} else if parsed, err := time.ParseDuration(raw); err == nil {
-			interval = parsed
-		}
-	}
 	statePath := firstEnvDefault(defaultStatePath, "BEACON_CLOUD_SHUTTLE_STATE")
 	return Config{
 		LogPath:        firstEnvDefault(defaultLogPath, "BEACON_CLOUD_LOG_PATH", "BEACON_ENDPOINT_LOG", "BEACON_LOG_PATH", "BEACON_RUNTIME_LOG"),
@@ -84,7 +73,6 @@ func ConfigFromEnv() Config {
 		Bucket:         strings.TrimSpace(os.Getenv("BEACON_CLOUD_GCS_BUCKET")),
 		Prefix:         strings.Trim(strings.TrimSpace(os.Getenv("BEACON_CLOUD_GCS_PREFIX")), "/"),
 		CredentialsB64: strings.TrimSpace(os.Getenv("BEACON_CLOUD_GCS_CREDENTIALS_B64")),
-		Interval:       interval,
 		Provider:       firstEnvDefault("claude_code_web", "BEACON_RUN_PROVIDER"),
 		RunID:          resolveRunID(statePath),
 		UserID:         firstEnvDefault("unknown", "BEACON_CLOUD_USER_ID_HASH", "BEACON_CLOUD_USER_ID"),
@@ -139,7 +127,7 @@ func Upload(ctx context.Context, cfg Config, force bool) error {
 	if info.Size() == 0 {
 		return nil
 	}
-	if !force && !uploadDue(cfg, info.Size(), time.Now().UTC()) {
+	if !force {
 		return nil
 	}
 	snapshot, cleanup, err := snapshotLog(cfg.LogPath)
@@ -174,27 +162,6 @@ func ObjectName(cfg Config) string {
 	parts = append(parts, "run_id="+cleanKeyPart(defaultString(cfg.RunID, "unknown")))
 	parts = append(parts, "runtime.jsonl")
 	return path.Join(parts...)
-}
-
-func uploadDue(cfg Config, currentSize int64, now time.Time) bool {
-	if cfg.Interval <= 0 {
-		return false
-	}
-	st, err := readState(cfg.StatePath)
-	if err != nil {
-		return true
-	}
-	if currentSize != st.LastSize {
-		// Still respect interval to avoid uploading on every hook during active runs.
-	}
-	if st.LastUpload == "" {
-		return true
-	}
-	last, err := time.Parse(time.RFC3339, st.LastUpload)
-	if err != nil {
-		return true
-	}
-	return now.Sub(last) >= cfg.Interval
 }
 
 func snapshotLog(logPath string) (string, func(), error) {
@@ -499,9 +466,4 @@ func firstEnvDefault(defaultValue string, keys ...string) string {
 
 func EncodeCredentialsForEnv(data []byte) string {
 	return base64.StdEncoding.EncodeToString(bytes.TrimSpace(data))
-}
-
-func ParseBoolEnv(key string) bool {
-	value, _ := strconv.ParseBool(strings.TrimSpace(os.Getenv(key)))
-	return value
 }
