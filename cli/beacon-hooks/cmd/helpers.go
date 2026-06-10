@@ -60,7 +60,7 @@ func resolveSessionID(input map[string]interface{}, platform string) string {
 		}
 		return getFirstStr(input, "sessionId", "session_id")
 	case "cursor":
-		return getFirstStr(input, "conversation_id")
+		return getFirstStr(input, "conversation_id", "parent_conversation_id")
 	case "vscode":
 		return getFirstStr(input, "sessionId", "session_id", "conversation_id", "gen_ai.conversation.id")
 	case "devin", "devin-cli":

@@ -86,6 +86,68 @@ func TestRunPostToolEmitsAntigravityToolFailed(t *testing.T) {
 	}
 }
 
+func TestRunPostToolEmitsCursorAfterShellExecution(t *testing.T) {
+	setupHookConfigDirs(t)
+	platformFlag = "cursor"
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	t.Setenv("BEACON_ENDPOINT_LOG", logPath)
+
+	out := runHookWithInput(t, runPostTool, map[string]interface{}{
+		"conversation_id": "conv-shell",
+		"hook_event_name": "afterShellExecution",
+		"command":         "go test ./...",
+		"output":          "ok",
+		"duration":        float64(1234),
+		"cwd":             "/repo",
+	})
+	if len(out) != 0 {
+		t.Fatalf("post-tool response = %#v, want empty response", out)
+	}
+
+	event := lastEndpointEvent(t, logPath)
+	if action := event["event"].(map[string]interface{})["action"]; action != "command.executed" {
+		t.Fatalf("event.action = %q, want command.executed", action)
+	}
+	command := event["command"].(map[string]interface{})
+	if command["command"] != "go test ./..." || command["output"] != "ok" {
+		t.Fatalf("command = %#v, want command and output", command)
+	}
+}
+
+func TestRunPostToolEmitsCursorPostToolFailure(t *testing.T) {
+	setupHookConfigDirs(t)
+	platformFlag = "cursor"
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	t.Setenv("BEACON_ENDPOINT_LOG", logPath)
+
+	out := runHookWithInput(t, runPostTool, map[string]interface{}{
+		"conversation_id": "conv-failure",
+		"hook_event_name": "postToolUseFailure",
+		"tool_name":       "Shell",
+		"tool_input": map[string]interface{}{
+			"command": "npm test",
+		},
+		"error_message": "Command timed out",
+		"failure_type":  "timeout",
+		"cwd":           "/repo",
+	})
+	if len(out) != 0 {
+		t.Fatalf("post-tool response = %#v, want empty response", out)
+	}
+
+	event := lastEndpointEvent(t, logPath)
+	if action := event["event"].(map[string]interface{})["action"]; action != "tool.failed" {
+		t.Fatalf("event.action = %q, want tool.failed", action)
+	}
+	if severity := event["severity"]; severity != "high" {
+		t.Fatalf("severity = %q, want high", severity)
+	}
+	tool := event["tool"].(map[string]interface{})
+	if tool["name"] != "Shell" || tool["failure_type"] != "timeout" {
+		t.Fatalf("tool = %#v, want Shell timeout", tool)
+	}
+}
+
 func TestRunPostToolEmitsAntigravityFileModifiedEvent(t *testing.T) {
 	setupHookConfigDirs(t)
 	platformFlag = "antigravity"

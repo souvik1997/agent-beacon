@@ -153,6 +153,67 @@ func TestInstallCursorHooksJSONDoesNotReplaceUserCommandWithBeaconEnvOnly(t *tes
 	}
 }
 
+func TestInstallCursorCloudHooksJSONPreservesNonBeaconHooks(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "hooks.json")
+	existing := `{"version":1,"hooks":{"preToolUse":[{"command":"echo keep"}],"sessionStart":[{"command":"echo local-only"}]}}`
+	if err := os.WriteFile(path, []byte(existing), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := InstallCursorCloudHooksJSON(path, CursorCloudOptions{
+		BinaryPath: "/tmp/beacon-hooks",
+		LogPath:    "/tmp/runtime.jsonl",
+	}); err != nil {
+		t.Fatalf("InstallCursorCloudHooksJSON returned error: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read hooks.json: %v", err)
+	}
+	text := string(data)
+	for _, want := range []string{
+		"echo keep",
+		"echo local-only",
+		"BEACON_ORIGIN=cloud",
+		"BEACON_RUN_PROVIDER=cursor_cloud",
+		"beforeShellExecution",
+		"preCompact",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("merged cursor cloud hooks missing %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, `"sessionEnd"`) || strings.Contains(text, `"beforeSubmitPrompt"`) {
+		t.Fatalf("cursor cloud install should not add unsupported cloud hooks:\n%s", text)
+	}
+}
+
+func TestInstallCursorCloudHooksJSONReplacesExistingBeaconHook(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "hooks.json")
+	existing := `{"version":1,"hooks":{"preToolUse":[{"command":"BEACON_ENDPOINT_MODE=1 old-beacon-hooks --platform cursor pre-tool"},{"command":"echo keep"}]}}`
+	if err := os.WriteFile(path, []byte(existing), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := InstallCursorCloudHooksJSON(path, CursorCloudOptions{
+		BinaryPath: "/tmp/new-beacon-hooks",
+		LogPath:    "/tmp/runtime.jsonl",
+	}); err != nil {
+		t.Fatalf("InstallCursorCloudHooksJSON returned error: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read hooks.json: %v", err)
+	}
+	text := string(data)
+	if strings.Contains(text, "old-beacon-hooks") {
+		t.Fatalf("old Beacon hook was not replaced:\n%s", text)
+	}
+	if !strings.Contains(text, "echo keep") || !strings.Contains(text, "/tmp/new-beacon-hooks") {
+		t.Fatalf("merged hook config missing kept or new hook:\n%s", text)
+	}
+}
+
 func TestInstallCursorWithUnknownLevelFailsBeforeWritingTarget(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)

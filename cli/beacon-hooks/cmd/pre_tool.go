@@ -44,7 +44,9 @@ func runPreTool(cmd *cobra.Command, args []string) {
 	}
 
 	logger.Debug("Pre-tool observed")
-	if platformFlag == "antigravity" {
+	if platformFlag == "cursor" && emitCursorPreHook(logger, input, sessionID) {
+		maybeUploadCursorCloudTelemetry(logger)
+	} else if platformFlag == "antigravity" {
 		emitAntigravityPromptFromTranscript(logger, input, sessionID)
 		emitPreToolObserved(logger, input, sessionID)
 	} else if platformFlag == "claude" || isDevinLikePlatform(platformFlag) || platformFlag == "grok" || platformFlag == "hermes" || platformFlag == "vscode" {
@@ -53,6 +55,36 @@ func runPreTool(cmd *cobra.Command, args []string) {
 		emitPreToolDecision(logger, input, sessionID, "approval.allowed", "allow", "Pre-tool observed")
 	}
 	outputJSON(preToolResponse())
+}
+
+func emitCursorPreHook(logger *logging.Logger, input map[string]interface{}, sessionID string) bool {
+	switch getFirstStr(input, "hook_event_name", "hookEventName") {
+	case "beforeShellExecution":
+		fields := sessionFields(sessionID, input)
+		command := getFirstStr(input, "command")
+		fields["command"] = map[string]interface{}{"command": command}
+		fields["approval"] = map[string]interface{}{
+			"required": true,
+			"decision": "allow",
+			"reason":   "Shell execution observed",
+		}
+		emitHookEvent(logger, "approval.allowed", "approval", "info", "Shell execution observed", input, fields)
+		return true
+	case "beforeReadFile":
+		fields := sessionFields(sessionID, input)
+		if filePath := getFirstStr(input, "file_path", "filePath", "path"); filePath != "" {
+			fields["file"] = map[string]interface{}{
+				"path":      filePath,
+				"operation": "read",
+				"language":  strings.TrimPrefix(filepath.Ext(filePath), "."),
+			}
+		}
+		emitHookEvent(logger, "file.read", "file", "info", "File read observed", input, fields)
+		return true
+	default:
+		emitPreToolDecision(logger, input, sessionID, "approval.allowed", "allow", "Pre-tool observed")
+		return true
+	}
 }
 
 func emitPreToolDecision(logger *logging.Logger, input map[string]interface{}, sessionID, action, decision, reason string) {

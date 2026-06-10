@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	endpointhooks "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks"
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +20,7 @@ var cloudOpts struct {
 	version        string
 	project        string
 	bucket         string
+	hooksJSONPath  string
 	location       string
 	prefix         string
 	serviceAccount string
@@ -35,6 +37,11 @@ var cloudCmd = &cobra.Command{
 var cloudClaudeWebCmd = &cobra.Command{
 	Use:   "claude-web",
 	Short: "Generate Claude Code on the web telemetry setup",
+}
+
+var cloudCursorCmd = &cobra.Command{
+	Use:   "cursor",
+	Short: "Generate Cursor cloud agent telemetry setup",
 }
 
 var cloudClaudeWebPrintHooksCmd = &cobra.Command{
@@ -66,6 +73,61 @@ var cloudClaudeWebPrintSetupCmd = &cobra.Command{
 	},
 }
 
+var cloudCursorPrintHooksCmd = &cobra.Command{
+	Use:          "print-hooks",
+	Short:        "Print project-level Cursor hook settings for a cloud sandbox",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if strings.TrimSpace(cloudOpts.binaryPath) == "" {
+			return fmt.Errorf("--binary-path is required")
+		}
+		rendered, err := endpointhooks.RenderCursorCloudHooks(endpointhooks.CursorCloudOptions{
+			BinaryPath: cloudOpts.binaryPath,
+			LogPath:    defaultCloudLogPath(cloudOpts.logPath),
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Print(rendered)
+		return nil
+	},
+}
+
+var cloudCursorInstallHooksCmd = &cobra.Command{
+	Use:          "install-hooks",
+	Short:        "Merge Beacon hooks into project-level Cursor cloud hook settings",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if strings.TrimSpace(cloudOpts.binaryPath) == "" {
+			return fmt.Errorf("--binary-path is required")
+		}
+		path := strings.TrimSpace(cloudOpts.hooksJSONPath)
+		if path == "" {
+			path = filepath.Join(".cursor", "hooks.json")
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			return err
+		}
+		return endpointhooks.InstallCursorCloudHooksJSON(path, endpointhooks.CursorCloudOptions{
+			BinaryPath: cloudOpts.binaryPath,
+			LogPath:    defaultCloudLogPath(cloudOpts.logPath),
+		})
+	},
+}
+
+var cloudCursorPrintSetupCmd = &cobra.Command{
+	Use:          "print-setup",
+	Short:        "Print a Cursor cloud agent environment setup script",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if strings.TrimSpace(cloudOpts.version) == "" {
+			return fmt.Errorf("--version is required")
+		}
+		fmt.Print(renderCursorCloudSetup(cloudOpts.version))
+		return nil
+	},
+}
+
 var cloudGCSCmd = &cobra.Command{
 	Use:   "gcs",
 	Short: "Configure GCS forwarding for cloud agent telemetry",
@@ -81,14 +143,24 @@ var cloudGCSSetupCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(cloudCmd)
 	cloudCmd.AddCommand(cloudClaudeWebCmd)
+	cloudCmd.AddCommand(cloudCursorCmd)
 	cloudCmd.AddCommand(cloudGCSCmd)
 	cloudClaudeWebCmd.AddCommand(cloudClaudeWebPrintHooksCmd)
 	cloudClaudeWebCmd.AddCommand(cloudClaudeWebPrintSetupCmd)
+	cloudCursorCmd.AddCommand(cloudCursorPrintHooksCmd)
+	cloudCursorCmd.AddCommand(cloudCursorInstallHooksCmd)
+	cloudCursorCmd.AddCommand(cloudCursorPrintSetupCmd)
 	cloudGCSCmd.AddCommand(cloudGCSSetupCmd)
 
 	cloudClaudeWebPrintHooksCmd.Flags().StringVar(&cloudOpts.binaryPath, "binary-path", "", "Path to beacon-hooks inside the cloud sandbox")
 	cloudClaudeWebPrintHooksCmd.Flags().StringVar(&cloudOpts.logPath, "log-path", "/tmp/beacon/runtime.jsonl", "Cloud sandbox runtime JSONL path")
 	cloudClaudeWebPrintSetupCmd.Flags().StringVar(&cloudOpts.version, "version", "", "Beacon release tag to download, such as v0.0.50")
+	cloudCursorPrintHooksCmd.Flags().StringVar(&cloudOpts.binaryPath, "binary-path", "", "Path to beacon-hooks inside the cloud sandbox")
+	cloudCursorPrintHooksCmd.Flags().StringVar(&cloudOpts.logPath, "log-path", "/tmp/beacon/runtime.jsonl", "Cloud sandbox runtime JSONL path")
+	cloudCursorInstallHooksCmd.Flags().StringVar(&cloudOpts.binaryPath, "binary-path", "", "Path to beacon-hooks inside the cloud sandbox")
+	cloudCursorInstallHooksCmd.Flags().StringVar(&cloudOpts.logPath, "log-path", "/tmp/beacon/runtime.jsonl", "Cloud sandbox runtime JSONL path")
+	cloudCursorInstallHooksCmd.Flags().StringVar(&cloudOpts.hooksJSONPath, "hooks-json", filepath.Join(".cursor", "hooks.json"), "Path to the project-level Cursor hooks.json")
+	cloudCursorPrintSetupCmd.Flags().StringVar(&cloudOpts.version, "version", "", "Beacon release tag to download, such as v0.0.50")
 
 	cloudGCSSetupCmd.Flags().StringVar(&cloudOpts.project, "project", "", "Google Cloud project ID")
 	cloudGCSSetupCmd.Flags().StringVar(&cloudOpts.bucket, "bucket", "", "GCS bucket for cloud agent telemetry")
@@ -98,6 +170,13 @@ func init() {
 	cloudGCSSetupCmd.Flags().BoolVar(&cloudOpts.printOnly, "print", false, "Print the gcloud commands without running them")
 	cloudGCSSetupCmd.Flags().BoolVar(&cloudOpts.apply, "apply", false, "Run the gcloud setup commands")
 	cloudGCSSetupCmd.Flags().BoolVar(&cloudOpts.printEnv, "print-env", false, "Print Claude web environment variables after setup")
+}
+
+func defaultCloudLogPath(path string) string {
+	if strings.TrimSpace(path) == "" {
+		return "/tmp/beacon/runtime.jsonl"
+	}
+	return path
 }
 
 func renderClaudeWebHooks(binaryPath, logPath string) string {
@@ -179,6 +258,47 @@ EOF
   --log-path /tmp/beacon/runtime.jsonl > "$REPO_ROOT/.claude/settings.local.json"
 
 echo "Beacon hooks installed at $REPO_ROOT/.claude/settings.local.json"
+`, version)
+}
+
+func renderCursorCloudSetup(version string) string {
+	return fmt.Sprintf(`set -euo pipefail
+mkdir -p /tmp/beacon/bin /tmp/beacon/logs
+
+BEACON_VERSION=%q
+OS="linux"
+case "$(uname -m)" in
+  x86_64|amd64) ARCH="amd64" ;;
+  aarch64|arm64) ARCH="arm64" ;;
+  *) echo "unsupported arch $(uname -m)" >&2; exit 1 ;;
+esac
+
+ARCHIVE="beacon_${BEACON_VERSION#v}_${OS}_${ARCH}.tar.gz"
+BASE="https://github.com/asymptote-labs/agent-beacon/releases/download/${BEACON_VERSION}"
+curl -fsSL "${BASE}/${ARCHIVE}" -o "/tmp/beacon/${ARCHIVE}"
+tar -xzf "/tmp/beacon/${ARCHIVE}" -C /tmp/beacon/bin
+chmod +x /tmp/beacon/bin/beacon /tmp/beacon/bin/beacon-hooks 2>/dev/null || true
+
+REPO_ROOT="${BEACON_CLOUD_REPO_DIR:-${CURSOR_PROJECT_DIR:-}}"
+if [ -z "$REPO_ROOT" ]; then
+  REPO_ROOT="$(pwd)"
+fi
+if [ -z "$REPO_ROOT" ] || [ ! -d "$REPO_ROOT" ]; then
+  echo "Could not find Cursor cloud repo root" >&2
+  exit 1
+fi
+
+mkdir -p "$REPO_ROOT/.cursor"
+cat >> "$REPO_ROOT/.git/info/exclude" <<'EOF'
+.cursor/hooks.json
+EOF
+cd "$REPO_ROOT"
+/tmp/beacon/bin/beacon cloud cursor install-hooks \
+  --binary-path /tmp/beacon/bin/beacon-hooks \
+  --log-path /tmp/beacon/runtime.jsonl \
+  --hooks-json "$REPO_ROOT/.cursor/hooks.json"
+
+echo "Beacon hooks installed at $REPO_ROOT/.cursor/hooks.json"
 `, version)
 }
 

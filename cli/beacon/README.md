@@ -38,7 +38,7 @@ configured.
 ## Cloud Agent Telemetry
 
 Use `beacon cloud` helpers to configure provider-managed cloud agent sandboxes.
-The first supported path is Claude Code on the web forwarding Beacon JSONL to
+Claude Code on the web and Cursor cloud agents can forward Beacon JSONL to
 customer-managed GCS:
 
 ```bash
@@ -53,32 +53,39 @@ customer-managed GCS:
 
 Copy the printed `BEACON_CLOUD_GCS_BUCKET`,
 `BEACON_CLOUD_GCS_PREFIX`, and `BEACON_CLOUD_GCS_CREDENTIALS_B64`
-values into the Claude Code web environment. Also set:
+values into the cloud agent environment. Also set:
 
 ```bash
 BEACON_ORIGIN=cloud
-BEACON_RUN_PROVIDER=claude_code_web
+BEACON_RUN_PROVIDER=claude_code_web # or cursor_cloud
 BEACON_RUN_EPHEMERAL=true
 BEACON_CLOUD_USER_ID_HASH=<stable-user-or-test-id>
 ```
 
 Then generate the setup script for a Beacon release and paste it into the
-Claude Code web environment setup field:
+provider's cloud setup field:
 
 ```bash
 ./beacon cloud claude-web print-setup --version vX.Y.Z
+./beacon cloud cursor print-setup --version vX.Y.Z
 ```
 
-The setup script installs `beacon-hooks` into the cloud sandbox, writes
-`.claude/settings.local.json` inside the sandbox clone, and uploads one
-browser-viewable per-session `/tmp/beacon/runtime.jsonl` snapshot to GCS at:
+The setup script installs `beacon-hooks` into the cloud sandbox and uploads a
+browser-viewable `/tmp/beacon/runtime.jsonl` snapshot to GCS. Claude web writes
+`.claude/settings.local.json` inside the sandbox clone. Cursor cloud merges
+Beacon commands into project-level `.cursor/hooks.json` because Cursor cloud
+only runs repository project hooks.
 
 ```text
 <prefix>/provider=claude_code_web/user_id=<id>/run_id=<claude-session-id>/runtime.jsonl
+<prefix>/provider=cursor_cloud/user_id=<id>/run_id=<generated-or-explicit-run-id>/runtime.jsonl
 ```
 
-Claude web network access must allow `oauth2.googleapis.com` and
-`storage.googleapis.com`. If you are testing unreleased Beacon changes, clone
+Cloud network access must allow `oauth2.googleapis.com` and
+`storage.googleapis.com`. Cursor cloud currently supports command hooks for tool
+activity, shell execution, file reads and edits, subagents, and compaction
+events; it does not currently run session start, session end, prompt submit, or
+stop hooks in cloud agents. If you are testing unreleased Beacon changes, clone
 and build the feature branch in the setup script instead of using
 `print-setup --version`.
 

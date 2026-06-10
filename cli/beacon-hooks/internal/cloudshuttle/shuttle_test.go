@@ -31,6 +31,19 @@ func TestObjectNamePartitionsByProviderUserRepoAndRun(t *testing.T) {
 	}
 }
 
+func TestObjectNameUsesCursorCloudProvider(t *testing.T) {
+	got := ObjectName(Config{
+		Prefix:   "agent-traces",
+		Provider: "cursor_cloud",
+		UserID:   "user-1",
+		RunID:    "manual-123",
+	})
+	want := "agent-traces/provider=cursor_cloud/user_id=user-1/run_id=manual-123/runtime.jsonl"
+	if got != want {
+		t.Fatalf("ObjectName = %q, want %q", got, want)
+	}
+}
+
 func TestUploadNoopsWithoutCredentials(t *testing.T) {
 	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
 	if err := os.WriteFile(logPath, []byte("{}\n"), 0644); err != nil {
