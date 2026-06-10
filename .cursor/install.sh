@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Installing Beacon Cursor Cloud hooks..."
+echo "Installing Beacon Cursor Cloud binaries..."
 
 BEACON_HOME="${BEACON_HOME:-/tmp/beacon}"
 BEACON_BIN_DIR="$BEACON_HOME/bin"
-BEACON_LOG_PATH="${BEACON_CLOUD_LOG_PATH:-$BEACON_HOME/runtime.jsonl}"
 REPO_ROOT="${BEACON_CLOUD_REPO_DIR:-${CURSOR_PROJECT_DIR:-$(pwd)}}"
 
 mkdir -p "$BEACON_BIN_DIR" "$BEACON_HOME/logs"
@@ -69,18 +68,10 @@ if [ ! -d "$REPO_ROOT" ] || [ ! -d "$REPO_ROOT/.git" ]; then
   exit 1
 fi
 
-mkdir -p "$REPO_ROOT/.cursor"
-hook_args=(
-  cloud cursor install-hooks
-  --binary-path "$BEACON_BIN_DIR/beacon-hooks"
-  --log-path "$BEACON_LOG_PATH"
-  --hooks-json "$REPO_ROOT/.cursor/hooks.json"
-)
-if [ "${BEACON_CURSOR_CLOUD_SAFE_HOOKS:-0}" = "1" ]; then
-  hook_args+=(--safe-hooks)
+if [ ! -f "$REPO_ROOT/.cursor/hooks.json" ]; then
+  echo "Beacon Cursor Cloud project hooks were not found at $REPO_ROOT/.cursor/hooks.json" >&2
+  echo "Commit .cursor/hooks.json before starting Cursor Cloud Agents." >&2
+  echo "Generate it with: beacon cloud cursor print-hooks --binary-path $BEACON_BIN_DIR/beacon-hooks --log-path $BEACON_HOME/runtime.jsonl > .cursor/hooks.json" >&2
 fi
 
-"$BEACON_BIN_DIR/beacon" "${hook_args[@]}"
-
-echo ".cursor/hooks.json" >> "$REPO_ROOT/.git/info/exclude" 2>/dev/null || true
-echo "Beacon Cursor Cloud hooks installed at $REPO_ROOT/.cursor/hooks.json"
+echo "Beacon Cursor Cloud binaries installed in $BEACON_BIN_DIR"

@@ -116,6 +116,18 @@ CI, and cloud surfaces.
 | [OpenAI](https://docs.asymptotelabs.ai/sdk/integrations-openai) | OpenLLMetry instrumentation through `@asymptote/sdk` | Supported OpenAI model call spans, errors, and OpenTelemetry attributes |
 | [Vercel AI SDK](https://docs.asymptotelabs.ai/sdk/integrations-vercel-ai-sdk) | Tracer handoff through `experimental_telemetry` | AI SDK model call and tool spans where telemetry is enabled |
 
+Cursor Cloud Agents load project hooks from `.cursor/hooks.json` at task start.
+For reliable Cursor Cloud telemetry, commit the generated project hooks to the
+target repository and use the cloud setup script only to install Beacon binaries
+under `/tmp/beacon/bin`. Generate the project hook file locally with:
+
+```bash
+mkdir -p .cursor
+beacon cloud cursor print-hooks \
+  --binary-path /tmp/beacon/bin/beacon-hooks \
+  --log-path /tmp/beacon/runtime.jsonl > .cursor/hooks.json
+```
+
 ### Output Destinations
 
 Agent Beacon writes endpoint telemetry to local JSONL by default and supports
