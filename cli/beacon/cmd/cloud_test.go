@@ -44,6 +44,8 @@ func TestRenderClaudeWebSetupUsesLocalSettings(t *testing.T) {
 	got := renderClaudeWebSetup("v0.0.50")
 	for _, want := range []string{
 		`BEACON_VERSION="v0.0.50"`,
+		`REPO_ROOT="${BEACON_CLOUD_REPO_DIR:-}"`,
+		`find /home/user`,
 		`.claude/settings.local.json`,
 		`.git/info/exclude`,
 	} {

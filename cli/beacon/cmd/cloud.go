@@ -157,14 +157,28 @@ curl -fsSL "${BASE}/${ARCHIVE}" -o "/tmp/beacon/${ARCHIVE}"
 tar -xzf "/tmp/beacon/${ARCHIVE}" -C /tmp/beacon/bin
 chmod +x /tmp/beacon/bin/beacon /tmp/beacon/bin/beacon-hooks 2>/dev/null || true
 
-mkdir -p .claude
-cat >> .git/info/exclude <<'EOF'
+REPO_ROOT="${BEACON_CLOUD_REPO_DIR:-}"
+if [ -z "$REPO_ROOT" ]; then
+  REPO_GIT_DIR="$(find /home/user -mindepth 2 -maxdepth 3 -type d -name .git -print -quit 2>/dev/null || true)"
+  if [ -n "$REPO_GIT_DIR" ]; then
+    REPO_ROOT="$(dirname "$REPO_GIT_DIR")"
+  fi
+fi
+if [ -z "$REPO_ROOT" ] || [ ! -d "$REPO_ROOT" ]; then
+  echo "Could not find Claude web repo root under /home/user" >&2
+  exit 1
+fi
+
+mkdir -p "$REPO_ROOT/.claude"
+cat >> "$REPO_ROOT/.git/info/exclude" <<'EOF'
 .claude/settings.local.json
 .claude/settings.json
 EOF
 /tmp/beacon/bin/beacon cloud claude-web print-hooks \
   --binary-path /tmp/beacon/bin/beacon-hooks \
-  --log-path /tmp/beacon/runtime.jsonl > .claude/settings.local.json
+  --log-path /tmp/beacon/runtime.jsonl > "$REPO_ROOT/.claude/settings.local.json"
+
+echo "Beacon hooks installed at $REPO_ROOT/.claude/settings.local.json"
 `, version)
 }
 
