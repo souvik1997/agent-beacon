@@ -96,6 +96,22 @@ func MaybeUpload(ctx context.Context, force bool) error {
 	return Upload(ctx, ConfigFromEnv(), force)
 }
 
+func ResetFromEnv() error {
+	cfg := ConfigFromEnv()
+	if strings.TrimSpace(os.Getenv("BEACON_ORIGIN")) != "cloud" {
+		return nil
+	}
+	for _, path := range []string{cfg.LogPath, cfg.LogPath + ".lock", cfg.StatePath, cfg.StatePath + ".run-id"} {
+		if path == "" {
+			continue
+		}
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
+}
+
 func Upload(ctx context.Context, cfg Config, force bool) error {
 	if strings.TrimSpace(cfg.Bucket) == "" || strings.TrimSpace(cfg.CredentialsB64) == "" {
 		return nil

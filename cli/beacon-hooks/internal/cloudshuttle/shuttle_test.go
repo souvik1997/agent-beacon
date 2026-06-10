@@ -42,6 +42,29 @@ func TestUploadNoopsWithoutCredentials(t *testing.T) {
 	}
 }
 
+func TestResetFromEnvRemovesCloudRuntimeFiles(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "runtime.jsonl")
+	statePath := filepath.Join(dir, "state.json")
+	for _, path := range []string{logPath, logPath + ".lock", statePath, statePath + ".run-id"} {
+		if err := os.WriteFile(path, []byte("x"), 0644); err != nil {
+			t.Fatalf("write %s: %v", path, err)
+		}
+	}
+	t.Setenv("BEACON_ORIGIN", "cloud")
+	t.Setenv("BEACON_ENDPOINT_LOG", logPath)
+	t.Setenv("BEACON_CLOUD_SHUTTLE_STATE", statePath)
+
+	if err := ResetFromEnv(); err != nil {
+		t.Fatalf("ResetFromEnv returned error: %v", err)
+	}
+	for _, path := range []string{logPath, logPath + ".lock", statePath, statePath + ".run-id"} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("%s still exists, stat err=%v", path, err)
+		}
+	}
+}
+
 func TestUploadSendsJSONLToGCS(t *testing.T) {
 	key := mustRSAKey(t)
 	var uploadedPath, uploadedAuth, uploadedType, uploadedBody string

@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/cloudshuttle"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/config"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/logging"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/state"
@@ -31,6 +32,9 @@ func runSessionStart(cmd *cobra.Command, args []string) {
 	}
 
 	sessionID := resolveSessionID(input, platformFlag)
+	if err := cloudshuttle.ResetFromEnv(); err != nil {
+		platformLogger.Warn("Failed to reset cloud telemetry log", "error", err.Error())
+	}
 	if sessionID == "" {
 		if isDevinLikePlatform(platformFlag) {
 			logger := logging.NewLoggerForPlatform("session-start", platformFlag)
