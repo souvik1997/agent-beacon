@@ -351,6 +351,12 @@ func emitCursorPostHookObserved(logger *logging.Logger, input map[string]interfa
 		})
 		emitHookEvent(logger, "tool.failed", "tool", "high", "Tool execution failed", input, fields)
 		return true
+	case "postToolUse":
+		toolName := strings.ToLower(getFirstStr(input, "tool_name", "toolName"))
+		if toolName == "shell" || strings.Contains(toolName, "terminal") {
+			return true
+		}
+		return false
 	default:
 		return false
 	}
