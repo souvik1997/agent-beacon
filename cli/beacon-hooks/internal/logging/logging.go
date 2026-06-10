@@ -118,6 +118,12 @@ func (l *Logger) EndpointEvent(action, category, severity, message string, field
 
 func (l *Logger) baseEndpointEvent(action, category, severity, message string) map[string]interface{} {
 	hostname, _ := os.Hostname()
+	user := map[string]interface{}{
+		"name": os.Getenv("USER"),
+	}
+	if uid := firstEnv("BEACON_CLOUD_USER_ID_HASH", "BEACON_CLOUD_USER_ID"); uid != "" {
+		user["uid"] = uid
+	}
 	event := map[string]interface{}{
 		"timestamp":      time.Now().UTC().Format(time.RFC3339),
 		"vendor":         "beacon",
@@ -133,18 +139,103 @@ func (l *Logger) baseEndpointEvent(action, category, severity, message string) m
 			"hostname": hostname,
 			"os":       runtime.GOOS,
 		},
-		"user": map[string]interface{}{
-			"name": os.Getenv("USER"),
-		},
+		"user": user,
 		"harness": map[string]interface{}{
 			"name": l.platform,
 		},
 		"message": asymptoteobserve.CleanString(message, asymptoteobserve.DefaultStringLimit, true),
 	}
+	if origin := firstEnv("BEACON_ORIGIN"); origin != "" {
+		event["origin"] = origin
+	}
+	if run := cloudRunFields(); len(run) > 0 {
+		event["run"] = run
+	}
 	if l.sessionID != "" {
 		event["session"] = map[string]interface{}{"id": l.sessionID}
 	}
 	return event
+}
+
+func cloudRunFields() map[string]interface{} {
+	run := map[string]interface{}{}
+	if provider := firstEnv("BEACON_RUN_PROVIDER"); provider != "" {
+		run["provider"] = provider
+	}
+	if runID := firstEnv("BEACON_RUN_ID", "CLAUDE_CODE_REMOTE_SESSION_ID"); runID != "" {
+		run["run_id"] = runID
+	} else if runID := fallbackCloudRunID(); runID != "" {
+		run["run_id"] = runID
+	}
+	if attempt := firstEnv("BEACON_RUN_ATTEMPT"); attempt != "" {
+		run["run_attempt"] = attempt
+	}
+	if workflow := firstEnv("BEACON_RUN_WORKFLOW"); workflow != "" {
+		run["workflow"] = workflow
+	}
+	if job := firstEnv("BEACON_RUN_JOB"); job != "" {
+		run["job"] = job
+	}
+	if eventName := firstEnv("BEACON_RUN_EVENT_NAME"); eventName != "" {
+		run["event_name"] = eventName
+	}
+	if commit := firstEnv("BEACON_RUN_COMMIT"); commit != "" {
+		run["commit"] = commit
+	}
+	if repository := firstEnv("BEACON_RUN_REPOSITORY"); repository != "" {
+		run["repository"] = repository
+	}
+	if branch := firstEnv("BEACON_RUN_BRANCH"); branch != "" {
+		run["branch"] = branch
+	}
+	if pr := firstEnv("BEACON_RUN_PR"); pr != "" {
+		run["pr"] = pr
+	}
+	if prNumber := firstEnv("BEACON_RUN_PR_NUMBER"); prNumber != "" {
+		run["pr_number"] = prNumber
+	}
+	if actor := firstEnv("BEACON_RUN_ACTOR"); actor != "" {
+		run["actor"] = actor
+	}
+	if ephemeral := firstEnv("BEACON_RUN_EPHEMERAL"); ephemeral != "" {
+		if value, err := strconv.ParseBool(ephemeral); err == nil {
+			run["ephemeral"] = value
+		}
+	}
+	return run
+}
+
+func firstEnv(keys ...string) string {
+	for _, key := range keys {
+		if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func fallbackCloudRunID() string {
+	if firstEnv("BEACON_ORIGIN") != "cloud" {
+		return ""
+	}
+	if firstEnv("BEACON_CLOUD_GCS_BUCKET") == "" || firstEnv("BEACON_CLOUD_GCS_CREDENTIALS_B64") == "" {
+		return ""
+	}
+	statePath := firstEnv("BEACON_CLOUD_SHUTTLE_STATE")
+	if statePath == "" {
+		statePath = "/tmp/beacon/shuttle-state.json"
+	}
+	path := statePath + ".run-id"
+	if data, err := os.ReadFile(path); err == nil {
+		if value := strings.TrimSpace(string(data)); value != "" {
+			return value
+		}
+	}
+	value := fmt.Sprintf("manual-%d", time.Now().UTC().UnixNano())
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err == nil {
+		_ = os.WriteFile(path, []byte(value+"\n"), 0644)
+	}
+	return value
 }
 
 func writeEndpointJSON(path string, event map[string]interface{}) error {
@@ -168,7 +259,7 @@ func writeEndpointJSON(path string, event map[string]interface{}) error {
 }
 
 func endpointLogPath() string {
-	if path := os.Getenv("BEACON_ENDPOINT_LOG"); path != "" {
+	if path := firstEnv("BEACON_ENDPOINT_LOG", "BEACON_CLOUD_LOG_PATH", "BEACON_LOG_PATH", "BEACON_RUNTIME_LOG"); path != "" {
 		return path
 	}
 	if os.Getenv("BEACON_ENDPOINT_MODE") == "" {

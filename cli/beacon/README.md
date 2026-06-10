@@ -35,6 +35,53 @@ Add optional Splunk HEC forwarding during install or repair:
 The local JSONL runtime log remains enabled when Splunk forwarding is
 configured.
 
+## Cloud Agent Telemetry
+
+Use `beacon cloud` helpers to configure provider-managed cloud agent sandboxes.
+The first supported path is Claude Code on the web forwarding Beacon JSONL to
+customer-managed GCS:
+
+```bash
+./beacon cloud gcs setup \
+  --project "$GCP_PROJECT" \
+  --bucket "$BEACON_CLOUD_GCS_BUCKET" \
+  --prefix "$BEACON_CLOUD_GCS_PREFIX" \
+  --service-account beacon-cloud-trace-uploader \
+  --apply \
+  --print-env
+```
+
+Copy the printed `BEACON_CLOUD_GCS_BUCKET`,
+`BEACON_CLOUD_GCS_PREFIX`, and `BEACON_CLOUD_GCS_CREDENTIALS_B64`
+values into the Claude Code web environment. Also set:
+
+```bash
+BEACON_ORIGIN=cloud
+BEACON_RUN_PROVIDER=claude_code_web
+BEACON_RUN_EPHEMERAL=true
+BEACON_CLOUD_USER_ID_HASH=<stable-user-or-test-id>
+```
+
+Then generate the setup script for a Beacon release and paste it into the
+Claude Code web environment setup field:
+
+```bash
+./beacon cloud claude-web print-setup --version vX.Y.Z
+```
+
+The setup script installs `beacon-hooks` into the cloud sandbox, writes
+`.claude/settings.local.json` inside the sandbox clone, and uploads one
+browser-viewable per-session `/tmp/beacon/runtime.jsonl` snapshot to GCS at:
+
+```text
+<prefix>/provider=claude_code_web/user_id=<id>/run_id=<claude-session-id>/runtime.jsonl
+```
+
+Claude web network access must allow `oauth2.googleapis.com` and
+`storage.googleapis.com`. If you are testing unreleased Beacon changes, clone
+and build the feature branch in the setup script instead of using
+`print-setup --version`.
+
 Add optional Falcon LogScale HEC forwarding during install or repair:
 
 ```bash
