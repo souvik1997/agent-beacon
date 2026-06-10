@@ -55,6 +55,68 @@ func TestRunPromptSubmitUsesCursorResponse(t *testing.T) {
 	}
 }
 
+func TestRunPreToolEmitsCursorBeforeShellExecution(t *testing.T) {
+	setupHookConfigDirs(t)
+	platformFlag = "cursor"
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	t.Setenv("BEACON_ENDPOINT_LOG", logPath)
+	t.Setenv("BEACON_ORIGIN", "cloud")
+	t.Setenv("BEACON_RUN_PROVIDER", "cursor_cloud")
+
+	out := runHookWithInput(t, runPreTool, map[string]interface{}{
+		"conversation_id": "conv-shell",
+		"hook_event_name": "beforeShellExecution",
+		"command":         "npm test",
+		"cwd":             "/repo",
+		"workspace_roots": []interface{}{"/repo"},
+		"cursor_version":  "1.7.2",
+		"generation_id":   "gen-1",
+		"model":           "gpt-5.5",
+		"BEACON_SENTINEL": "ignored",
+	})
+	if out["permission"] != "allow" {
+		t.Fatalf("beforeShellExecution response = %#v, want permission allow", out)
+	}
+
+	event := lastEndpointEvent(t, logPath)
+	if action := event["event"].(map[string]interface{})["action"]; action != "approval.allowed" {
+		t.Fatalf("event.action = %q, want approval.allowed", action)
+	}
+	if command := event["command"].(map[string]interface{})["command"]; command != "npm test" {
+		t.Fatalf("command = %q, want npm test", command)
+	}
+	if provider := event["run"].(map[string]interface{})["provider"]; provider != "cursor_cloud" {
+		t.Fatalf("run.provider = %q, want cursor_cloud", provider)
+	}
+}
+
+func TestRunPreToolEmitsCursorBeforeReadFile(t *testing.T) {
+	setupHookConfigDirs(t)
+	platformFlag = "cursor"
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	t.Setenv("BEACON_ENDPOINT_LOG", logPath)
+
+	out := runHookWithInput(t, runPreTool, map[string]interface{}{
+		"conversation_id": "conv-read",
+		"hook_event_name": "beforeReadFile",
+		"file_path":       "/repo/main.go",
+		"content":         "token=cursor-secret",
+		"cwd":             "/repo",
+	})
+	if out["permission"] != "allow" {
+		t.Fatalf("beforeReadFile response = %#v, want permission allow", out)
+	}
+
+	event := lastEndpointEvent(t, logPath)
+	if action := event["event"].(map[string]interface{})["action"]; action != "file.read" {
+		t.Fatalf("event.action = %q, want file.read", action)
+	}
+	file := event["file"].(map[string]interface{})
+	if file["path"] != "/repo/main.go" || file["operation"] != "read" {
+		t.Fatalf("file = %#v, want /repo/main.go read", file)
+	}
+}
+
 func TestVSCodeHooksEmitLowNoiseTelemetry(t *testing.T) {
 	setupHookConfigDirs(t)
 	platformFlag = "vscode"
@@ -113,6 +175,63 @@ func TestRunSubagentLifecycleEmitsVSCodeEvents(t *testing.T) {
 	}
 	if _, ok := event["tool"]; ok {
 		t.Fatalf("subagent event should not be encoded as tool: %#v", event["tool"])
+	}
+}
+
+func TestRunSubagentLifecycleEmitsCursorCloudFields(t *testing.T) {
+	setupHookConfigDirs(t)
+	platformFlag = "cursor"
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	t.Setenv("BEACON_ENDPOINT_LOG", logPath)
+	t.Setenv("BEACON_ORIGIN", "cloud")
+	t.Setenv("BEACON_RUN_PROVIDER", "cursor_cloud")
+
+	runHookWithInput(t, func(cmd *cobra.Command, args []string) {
+		runSubagentLifecycle("subagent.started", "Subagent started")
+	}, map[string]interface{}{
+		"hook_event_name":        "subagentStart",
+		"parent_conversation_id": "conv-parent",
+		"subagent_id":            "subagent-1",
+		"subagent_type":          "generalPurpose",
+		"subagent_model":         "gpt-5.5",
+		"tool_call_id":           "tool-1",
+		"git_branch":             "feature/cursor-cloud",
+		"cwd":                    "/repo",
+	})
+
+	event := lastEndpointEvent(t, logPath)
+	if action := event["event"].(map[string]interface{})["action"]; action != "subagent.started" {
+		t.Fatalf("event.action = %q, want subagent.started", action)
+	}
+	if sessionID := event["session"].(map[string]interface{})["id"]; sessionID != "conv-parent" {
+		t.Fatalf("session.id = %q, want conv-parent", sessionID)
+	}
+	raw := event["raw"].(map[string]interface{})["subagent"].(map[string]interface{})
+	if raw["id"] != "subagent-1" || raw["type"] != "generalPurpose" || raw["tool_call_id"] != "tool-1" {
+		t.Fatalf("raw.subagent = %#v, want Cursor subagent fields", raw)
+	}
+}
+
+func TestRunCursorEventEmitsPreCompact(t *testing.T) {
+	setupHookConfigDirs(t)
+	platformFlag = "cursor"
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	t.Setenv("BEACON_ENDPOINT_LOG", logPath)
+	t.Setenv("BEACON_ORIGIN", "cloud")
+	t.Setenv("BEACON_RUN_PROVIDER", "cursor_cloud")
+
+	out := runHookWithInput(t, runCursorEvent, map[string]interface{}{
+		"conversation_id": "conv-compact",
+		"hook_event_name": "preCompact",
+		"cwd":             "/repo",
+	})
+	if len(out) != 0 {
+		t.Fatalf("cursor-event response = %#v, want empty response", out)
+	}
+
+	event := lastEndpointEvent(t, logPath)
+	if action := event["event"].(map[string]interface{})["action"]; action != "session.compacting" {
+		t.Fatalf("event.action = %q, want session.compacting", action)
 	}
 }
 

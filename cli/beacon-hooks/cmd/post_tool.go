@@ -65,6 +65,7 @@ func runPostTool(cmd *cobra.Command, args []string) {
 		hookEvent, _ := input["hook_event_name"].(string)
 		if hookEvent != "afterFileEdit" {
 			emitPostToolObserved(logger, input)
+			maybeUploadCursorCloudTelemetry(logger)
 			outputJSON(emptyResponse)
 			return
 		}
@@ -78,11 +79,13 @@ func runPostTool(cmd *cobra.Command, args []string) {
 		if platformFlag != "cursor" {
 			emitPostToolObserved(logger, input)
 		}
+		maybeUploadCursorCloudTelemetry(logger)
 		outputJSON(emptyResponse)
 		return
 	}
 
 	recordLocalEdit(params, logger)
+	maybeUploadCursorCloudTelemetry(logger)
 	outputJSON(emptyResponse)
 }
 
@@ -280,6 +283,9 @@ func resolveToolResponse(input map[string]interface{}) map[string]interface{} {
 }
 
 func emitPostToolObserved(logger *logging.Logger, input map[string]interface{}) {
+	if platformFlag == "cursor" && emitCursorPostHookObserved(logger, input) {
+		return
+	}
 	toolName := getFirstStr(input, "tool_name", "toolName")
 	if platformFlag == "antigravity" {
 		toolName = antigravityToolName(input)
@@ -314,6 +320,51 @@ func emitPostToolObserved(logger *logging.Logger, input map[string]interface{}) 
 		message = "Shell command executed"
 	}
 	emitHookEvent(logger, action, category, "info", message, input, fields)
+}
+
+func emitCursorPostHookObserved(logger *logging.Logger, input map[string]interface{}) bool {
+	hookEvent := getFirstStr(input, "hook_event_name", "hookEventName")
+	sessionID := resolveSessionID(input, "cursor")
+	fields := sessionFields(sessionID, input)
+	switch hookEvent {
+	case "afterShellExecution":
+		command := getFirstStr(input, "command")
+		commandFields := map[string]interface{}{"command": command}
+		if output := getFirstStr(input, "output"); output != "" {
+			commandFields["output"] = output
+		}
+		if duration, ok := input["duration"]; ok {
+			commandFields["duration_ms"] = duration
+		}
+		fields["command"] = commandFields
+		emitHookEvent(logger, "command.executed", "command", "info", "Shell command executed", input, fields)
+		return true
+	case "postToolUseFailure":
+		toolName := getFirstStr(input, "tool_name", "toolName")
+		toolInput := resolveToolInput(input)
+		for key, value := range toolFields(toolName, toolInput) {
+			fields[key] = value
+		}
+		fields["tool"] = mergeNested(fields["tool"], map[string]interface{}{
+			"name":         toolName,
+			"failure_type": getFirstStr(input, "failure_type"),
+			"error":        getFirstStr(input, "error_message", "error"),
+		})
+		emitHookEvent(logger, "tool.failed", "tool", "high", "Tool execution failed", input, fields)
+		return true
+	case "postToolUse":
+		toolName := strings.ToLower(getFirstStr(input, "tool_name", "toolName"))
+		if toolName == "shell" || strings.Contains(toolName, "terminal") {
+			// Only suppress when afterShellExecution is also registered (cloud setups).
+			// Desktop/project installs wire shell activity only through postToolUse.
+			if isCursorCloudMode() {
+				return true
+			}
+		}
+		return false
+	default:
+		return false
+	}
 }
 
 // isFileEditTool returns true if the tool name represents a file edit operation.

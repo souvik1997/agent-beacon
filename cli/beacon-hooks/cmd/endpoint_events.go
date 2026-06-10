@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -50,6 +51,21 @@ func uploadCloudTelemetry(logger *logging.Logger, force bool) {
 	if err := cloudshuttle.MaybeUpload(ctx, force); err != nil {
 		logger.Warn("Cloud telemetry upload failed", "error", err.Error(), "force", force)
 	}
+}
+
+func isCursorCloudMode() bool {
+	return strings.TrimSpace(os.Getenv("BEACON_ORIGIN")) == "cloud" &&
+		strings.TrimSpace(os.Getenv("BEACON_RUN_PROVIDER")) == "cursor_cloud"
+}
+
+func maybeUploadCursorCloudTelemetry(logger *logging.Logger) {
+	if platformFlag != "cursor" {
+		return
+	}
+	if !isCursorCloudMode() {
+		return
+	}
+	uploadCloudTelemetry(logger, true)
 }
 
 func sessionFields(sessionID string, input map[string]interface{}) map[string]interface{} {

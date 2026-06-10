@@ -31,6 +31,11 @@ type CursorOptions struct {
 	UserMode bool
 }
 
+type CursorCloudOptions struct {
+	BinaryPath string
+	LogPath    string
+}
+
 type CursorStatus struct {
 	Installed     bool   `json:"installed"`
 	BinaryPath    string `json:"binary_path,omitempty"`
@@ -103,6 +108,76 @@ func installCursorHooksJSON(path, binaryPath, logPath, configPath string) error 
 		return err
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+func InstallCursorCloudHooksJSON(path string, opts CursorCloudOptions) error {
+	hooksJSON, err := readHooksJSON(path)
+	if err != nil {
+		return err
+	}
+	for hookName, refs := range CursorCloudHookRefs(opts) {
+		merged := hooksJSON.Hooks[hookName]
+		for _, ref := range refs {
+			merged = mergeEndpointHook(merged, ref)
+		}
+		hooksJSON.Hooks[hookName] = merged
+	}
+	data, err := json.MarshalIndent(hooksJSON, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+func RenderCursorCloudHooks(opts CursorCloudOptions) (string, error) {
+	hooksJSON := HooksJSON{
+		Version: 1,
+		Hooks:   CursorCloudHookRefs(opts),
+	}
+	data, err := json.MarshalIndent(hooksJSON, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(data) + "\n", nil
+}
+
+func CursorCloudHookRefs(opts CursorCloudOptions) map[string][]HookRef {
+	if opts.LogPath == "" {
+		opts.LogPath = "/tmp/beacon/runtime.jsonl"
+	}
+	prefix := cursorCloudCommandPrefix(opts.BinaryPath, opts.LogPath)
+	return map[string][]HookRef{
+		"preToolUse":         {{Command: prefix + " pre-tool"}},
+		"postToolUse":        {{Command: prefix + " post-tool"}},
+		"postToolUseFailure": {{Command: prefix + " post-tool"}},
+		"beforeShellExecution": {
+			{Command: prefix + " pre-tool"},
+		},
+		"afterShellExecution": {
+			{Command: prefix + " post-tool"},
+		},
+		"beforeReadFile": {
+			{Command: prefix + " pre-tool"},
+		},
+		"afterFileEdit": {{Command: prefix + " post-tool"}},
+		"subagentStart": {
+			{Command: prefix + " subagent-start"},
+		},
+		"subagentStop": {
+			{Command: prefix + " subagent-stop"},
+		},
+		"preCompact": {
+			{Command: prefix + " cursor-event"},
+		},
+	}
+}
+
+func cursorCloudCommandPrefix(binaryPath, logPath string) string {
+	return fmt.Sprintf(
+		"BEACON_ENDPOINT_MODE=1 BEACON_ORIGIN=cloud BEACON_RUN_PROVIDER=cursor_cloud BEACON_RUN_EPHEMERAL=true BEACON_ENDPOINT_LOG=%s %s --platform cursor",
+		shellQuote(logPath),
+		shellQuote(binaryPath),
+	)
 }
 
 func readHooksJSON(path string) (HooksJSON, error) {
