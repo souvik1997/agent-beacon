@@ -53,11 +53,16 @@ func uploadCloudTelemetry(logger *logging.Logger, force bool) {
 	}
 }
 
+func isCursorCloudMode() bool {
+	return strings.TrimSpace(os.Getenv("BEACON_ORIGIN")) == "cloud" &&
+		strings.TrimSpace(os.Getenv("BEACON_RUN_PROVIDER")) == "cursor_cloud"
+}
+
 func maybeUploadCursorCloudTelemetry(logger *logging.Logger) {
 	if platformFlag != "cursor" {
 		return
 	}
-	if strings.TrimSpace(os.Getenv("BEACON_ORIGIN")) != "cloud" || strings.TrimSpace(os.Getenv("BEACON_RUN_PROVIDER")) != "cursor_cloud" {
+	if !isCursorCloudMode() {
 		return
 	}
 	uploadCloudTelemetry(logger, true)
