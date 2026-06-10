@@ -97,9 +97,12 @@ Claude Cowork, OpenClaw).
 
 Beacon can capture Claude Code on the web sessions by installing ephemeral
 project-level hooks inside the cloud sandbox and uploading the per-session
-`runtime.jsonl` snapshot to customer-managed Google Cloud Storage. Start with
-the self-serve walkthrough in
-[`examples/cloud-agents/claude-web-gcs.md`](examples/cloud-agents/claude-web-gcs.md).
+`runtime.jsonl` snapshot to customer-managed Google Cloud Storage. Use
+`beacon cloud gcs setup` to create a scoped GCS uploader service account and
+print the Claude web environment variables, then use
+`beacon cloud claude-web print-setup --version <tag>` as the Claude environment
+setup script. The setup script writes `.claude/settings.local.json` inside the
+cloud clone only, so generated hook configuration stays out of commits.
 
 #### Knowledge Worker Agent Harnesses
 
