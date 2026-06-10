@@ -12,7 +12,6 @@ func TestCloudCommandsRegistered(t *testing.T) {
 		{"cloud", "claude-web", "print-hooks"},
 		{"cloud", "claude-web", "print-setup"},
 		{"cloud", "cursor", "print-hooks"},
-		{"cloud", "cursor", "install-hooks"},
 		{"cloud", "cursor", "print-setup"},
 		{"cloud", "gcs", "setup"},
 	} {
@@ -36,7 +35,6 @@ func TestRenderCursorCloudHooks(t *testing.T) {
 	}
 	for _, want := range []string{
 		`"version": 1`,
-		`"preToolUse"`,
 		`"postToolUse"`,
 		`"postToolUseFailure"`,
 		`"beforeShellExecution"`,
@@ -46,7 +44,6 @@ func TestRenderCursorCloudHooks(t *testing.T) {
 		`"subagentStart"`,
 		`"subagentStop"`,
 		`"preCompact"`,
-		`"matcher": "Write|Edit|MultiEdit|Delete|Grep|Glob|MCP|Task"`,
 		`BEACON_ORIGIN=cloud`,
 		`BEACON_RUN_PROVIDER=cursor_cloud`,
 		`'/tmp/beacon/bin/beacon-hooks' --platform cursor`,
@@ -55,7 +52,7 @@ func TestRenderCursorCloudHooks(t *testing.T) {
 			t.Fatalf("rendered hooks missing %q:\n%s", want, got)
 		}
 	}
-	for _, unsupported := range []string{`"sessionStart"`, `"sessionEnd"`, `"beforeSubmitPrompt"`, `"stop"`} {
+	for _, unsupported := range []string{`"preToolUse"`, `"sessionStart"`, `"sessionEnd"`, `"beforeSubmitPrompt"`, `"stop"`} {
 		if strings.Contains(got, unsupported) {
 			t.Fatalf("rendered cursor cloud hooks should not contain %q:\n%s", unsupported, got)
 		}
@@ -73,7 +70,6 @@ func TestRenderCursorCloudSafeHooks(t *testing.T) {
 	}
 	for _, want := range []string{
 		`"beforeReadFile"`,
-		`"preToolUse"`,
 		`"postToolUse"`,
 		`"subagentStart"`,
 		`"preCompact"`,
@@ -87,23 +83,27 @@ func TestRenderCursorCloudSafeHooks(t *testing.T) {
 			t.Fatalf("rendered safe hooks should not contain %q:\n%s", skipped, got)
 		}
 	}
+	if strings.Contains(got, `"preToolUse"`) {
+		t.Fatalf("rendered safe hooks should not contain broad preToolUse:\n%s", got)
+	}
 }
 
-func TestRenderCursorCloudSetupInstallsHooks(t *testing.T) {
+func TestRenderCursorCloudSetupInstallsBinariesOnly(t *testing.T) {
 	got := renderCursorCloudSetup("v0.0.50")
 	for _, want := range []string{
 		`BEACON_VERSION="v0.0.50"`,
-		`REPO_ROOT="${BEACON_CLOUD_REPO_DIR:-${CURSOR_PROJECT_DIR:-}}"`,
-		`.cursor/hooks.json`,
-		`beacon cloud cursor install-hooks`,
-		`--hooks-json "$REPO_ROOT/.cursor/hooks.json"`,
+		`tar -xzf "/tmp/beacon/${ARCHIVE}" -C /tmp/beacon/bin`,
+		`Beacon binaries installed in /tmp/beacon/bin`,
+		`beacon cloud cursor print-hooks --binary-path /tmp/beacon/bin/beacon-hooks --log-path /tmp/beacon/runtime.jsonl > .cursor/hooks.json`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("rendered setup missing %q:\n%s", want, got)
 		}
 	}
-	if strings.Contains(got, `> "$REPO_ROOT/.cursor/hooks.json"`) {
-		t.Fatalf("cursor setup should merge hooks instead of overwriting hooks.json:\n%s", got)
+	for _, forbidden := range []string{`beacon cloud cursor install-hooks`, `--hooks-json`, `.git/info/exclude`} {
+		if strings.Contains(got, forbidden) {
+			t.Fatalf("cursor setup should not rewrite project hooks with %q:\n%s", forbidden, got)
+		}
 	}
 }
 

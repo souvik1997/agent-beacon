@@ -111,25 +111,6 @@ func installCursorHooksJSON(path, binaryPath, logPath, configPath string) error 
 	return os.WriteFile(path, data, 0644)
 }
 
-func InstallCursorCloudHooksJSON(path string, opts CursorCloudOptions) error {
-	hooksJSON, err := readHooksJSON(path)
-	if err != nil {
-		return err
-	}
-	for hookName, refs := range CursorCloudHookRefs(opts) {
-		merged := hooksJSON.Hooks[hookName]
-		for _, ref := range refs {
-			merged = mergeEndpointHook(merged, ref)
-		}
-		hooksJSON.Hooks[hookName] = merged
-	}
-	data, err := json.MarshalIndent(hooksJSON, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0644)
-}
-
 func RenderCursorCloudHooks(opts CursorCloudOptions) (string, error) {
 	hooksJSON := HooksJSON{
 		Version: 1,
@@ -148,7 +129,6 @@ func CursorCloudHookRefs(opts CursorCloudOptions) map[string][]HookRef {
 	}
 	prefix := cursorCloudCommandPrefix(opts.BinaryPath, opts.LogPath)
 	refs := map[string][]HookRef{
-		"preToolUse":         {{Command: prefix + " pre-tool", Matcher: "Write|Edit|MultiEdit|Delete|Grep|Glob|MCP|Task"}},
 		"postToolUse":        {{Command: prefix + " post-tool"}},
 		"postToolUseFailure": {{Command: prefix + " post-tool"}},
 		"beforeReadFile": {
