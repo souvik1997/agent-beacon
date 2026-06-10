@@ -233,7 +233,7 @@ func writeEndpointJSON(path string, event map[string]interface{}) error {
 }
 
 func endpointLogPath() string {
-	if path := os.Getenv("BEACON_ENDPOINT_LOG"); path != "" {
+	if path := firstEnv("BEACON_ENDPOINT_LOG", "BEACON_CLOUD_LOG_PATH", "BEACON_LOG_PATH", "BEACON_RUNTIME_LOG"); path != "" {
 		return path
 	}
 	if os.Getenv("BEACON_ENDPOINT_MODE") == "" {

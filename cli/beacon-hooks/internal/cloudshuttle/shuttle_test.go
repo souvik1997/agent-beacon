@@ -58,10 +58,13 @@ func TestResetFromEnvRemovesCloudRuntimeFiles(t *testing.T) {
 	if err := ResetFromEnv(); err != nil {
 		t.Fatalf("ResetFromEnv returned error: %v", err)
 	}
-	for _, path := range []string{logPath, logPath + ".lock", statePath, statePath + ".run-id"} {
+	for _, path := range []string{logPath, logPath + ".lock", statePath + ".run-id"} {
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			t.Fatalf("%s still exists, stat err=%v", path, err)
 		}
+	}
+	if _, err := os.Stat(statePath); err != nil {
+		t.Fatalf("state path should be recreated to throttle first periodic upload: %v", err)
 	}
 }
 
@@ -147,6 +150,17 @@ func TestStableFallbackRunIDReusesGeneratedValue(t *testing.T) {
 	second := stableFallbackRunID(statePath)
 	if first == "" || second == "" || first != second {
 		t.Fatalf("fallback run id not stable: first=%q second=%q", first, second)
+	}
+}
+
+func TestResolveRunIDPrefersEnvironmentWithoutFallbackSideEffect(t *testing.T) {
+	statePath := filepath.Join(t.TempDir(), "shuttle-state.json")
+	t.Setenv("CLAUDE_CODE_REMOTE_SESSION_ID", "cse_env")
+	if got := resolveRunID(statePath); got != "cse_env" {
+		t.Fatalf("resolveRunID = %q, want cse_env", got)
+	}
+	if _, err := os.Stat(statePath + ".run-id"); !os.IsNotExist(err) {
+		t.Fatalf("fallback run-id file should not be created when env run id exists: %v", err)
 	}
 }
 

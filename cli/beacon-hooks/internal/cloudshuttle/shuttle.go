@@ -59,6 +59,7 @@ type serviceAccount struct {
 type state struct {
 	LastUpload string `json:"last_upload,omitempty"`
 	LastSize   int64  `json:"last_size,omitempty"`
+	LastObject string `json:"last_object,omitempty"`
 }
 
 type tokenResponse struct {
@@ -85,7 +86,7 @@ func ConfigFromEnv() Config {
 		CredentialsB64: strings.TrimSpace(os.Getenv("BEACON_CLOUD_GCS_CREDENTIALS_B64")),
 		Interval:       interval,
 		Provider:       firstEnvDefault("claude_code_web", "BEACON_RUN_PROVIDER"),
-		RunID:          firstEnvDefault(stableFallbackRunID(statePath), "BEACON_RUN_ID", "CLAUDE_CODE_REMOTE_SESSION_ID"),
+		RunID:          resolveRunID(statePath),
 		UserID:         firstEnvDefault("unknown", "BEACON_CLOUD_USER_ID_HASH", "BEACON_CLOUD_USER_ID"),
 		Repository:     firstEnv("BEACON_RUN_REPOSITORY"),
 		GCSEndpoint:    firstEnvDefault(defaultGCSEndpoint, "BEACON_CLOUD_GCS_ENDPOINT"),
@@ -101,11 +102,22 @@ func ResetFromEnv() error {
 	if strings.TrimSpace(os.Getenv("BEACON_ORIGIN")) != "cloud" {
 		return nil
 	}
-	for _, path := range []string{cfg.LogPath, cfg.LogPath + ".lock", cfg.StatePath, cfg.StatePath + ".run-id"} {
+	if err := preserveExistingLog(cfg); err != nil {
+		return err
+	}
+	for _, path := range []string{cfg.LogPath + ".lock", cfg.StatePath, cfg.StatePath + ".run-id"} {
 		if path == "" {
 			continue
 		}
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	if cfg.Interval > 0 {
+		if err := writeState(cfg.StatePath, state{
+			LastUpload: time.Now().UTC().Format(time.RFC3339),
+			LastSize:   0,
+		}); err != nil {
 			return err
 		}
 	}
@@ -154,6 +166,7 @@ func Upload(ctx context.Context, cfg Config, force bool) error {
 	return writeState(cfg.StatePath, state{
 		LastUpload: time.Now().UTC().Format(time.RFC3339),
 		LastSize:   info.Size(),
+		LastObject: objectName,
 	})
 }
 
@@ -202,7 +215,11 @@ func snapshotLog(logPath string) (string, func(), error) {
 		return "", func() {}, err
 	}
 	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
-	defer lock.Close()
+	defer func() {
+		if err := lock.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "cloudshuttle: failed to close lock file %s.lock: %v\n", logPath, err)
+		}
+	}()
 
 	source, err := os.Open(logPath)
 	if err != nil {
@@ -379,6 +396,44 @@ func writeState(path string, st state) error {
 		return err
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+func preserveExistingLog(cfg Config) error {
+	info, err := os.Stat(cfg.LogPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if info.Size() == 0 {
+		return os.Remove(cfg.LogPath)
+	}
+	if st, err := readState(cfg.StatePath); err == nil && st.LastObject != "" && cfg.Bucket != "" && cfg.CredentialsB64 != "" {
+		snapshot, cleanup, err := snapshotLog(cfg.LogPath)
+		if err == nil {
+			defer cleanup()
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if token, tokenErr := accessToken(ctx, cfg.CredentialsB64); tokenErr == nil {
+				if uploadErr := uploadObject(ctx, cfg.GCSEndpoint, cfg.Bucket, st.LastObject, snapshot, token); uploadErr == nil {
+					return os.Remove(cfg.LogPath)
+				}
+			}
+		}
+	}
+	preservedPath := fmt.Sprintf("%s.previous-%d", cfg.LogPath, time.Now().UTC().UnixNano())
+	if err := os.Rename(cfg.LogPath, preservedPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+func resolveRunID(statePath string) string {
+	if runID := firstEnv("BEACON_RUN_ID", "CLAUDE_CODE_REMOTE_SESSION_ID"); runID != "" {
+		return runID
+	}
+	return stableFallbackRunID(statePath)
 }
 
 func stableFallbackRunID(statePath string) string {
