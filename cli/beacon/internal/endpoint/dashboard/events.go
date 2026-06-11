@@ -42,6 +42,7 @@ type EventQuery struct {
 	Category   string
 	Repository string
 	Session    string
+	Trace      string
 	File       string
 	Command    string
 	MCP        string
@@ -317,6 +318,11 @@ func matchesQuery(record EventRecord, query EventQuery) bool {
 			return false
 		}
 	}
+	if query.Trace != "" {
+		if event.Trace == nil || (!containsFold(event.Trace.ID, query.Trace) && !containsFold(event.Trace.SpanID, query.Trace) && !containsFold(event.Trace.ParentSpanID, query.Trace)) {
+			return false
+		}
+	}
 	if query.File != "" {
 		if event.File == nil || !containsFold(event.File.Path, query.File) {
 			return false
@@ -440,6 +446,9 @@ func searchFields(record EventRecord) []string {
 	if event.Session != nil {
 		fields = append(fields, event.Session.ID, event.Session.WorkingDirectory)
 	}
+	if event.Trace != nil {
+		fields = append(fields, event.Trace.ID, event.Trace.SpanID, event.Trace.ParentSpanID)
+	}
 	if event.Tool != nil {
 		fields = append(fields, event.Tool.Name, event.Tool.Command, event.Tool.Path)
 	}
@@ -503,6 +512,7 @@ func activeFilters(query EventQuery) map[string]string {
 	add("category", query.Category)
 	add("repository", query.Repository)
 	add("session", query.Session)
+	add("trace", query.Trace)
 	add("file", query.File)
 	add("command", query.Command)
 	add("mcp", query.MCP)

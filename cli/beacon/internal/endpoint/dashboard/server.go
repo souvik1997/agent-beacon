@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lifecycle"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/schema"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/tokens"
 )
 
 const DefaultAddr = "127.0.0.1:8765"
@@ -87,6 +89,25 @@ func Handler(opts Options) (http.Handler, error) {
 			return
 		}
 		writeJSON(w, events)
+	})
+	mux.HandleFunc("/api/tokens", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		// Token rollups need the full matching log, not the latest page.
+		query := parseQuery(r, maxEventLimit)
+		query.NoLimit = true
+		result, err := ReadEvents(opts.LogPath, query)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		events := make([]schema.Event, 0, len(result.Events))
+		for _, record := range result.Events {
+			events = append(events, record.Event)
+		}
+		writeJSON(w, tokens.Aggregate(events, tokenOptions(r)))
 	})
 	mux.HandleFunc("/api/event", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -176,6 +197,7 @@ func parseQuery(r *http.Request, fallbackLimit int) EventQuery {
 		Category:   q.Get("category"),
 		Repository: q.Get("repository"),
 		Session:    q.Get("session"),
+		Trace:      q.Get("trace"),
 		File:       q.Get("file"),
 		Command:    q.Get("command"),
 		MCP:        q.Get("mcp"),
@@ -196,6 +218,20 @@ func parseQuery(r *http.Request, fallbackLimit int) EventQuery {
 		}
 	}
 	return query
+}
+
+func tokenOptions(r *http.Request) tokens.Options {
+	q := r.URL.Query()
+	opts := tokens.Options{SessionID: q.Get("session")}
+	if bucket := q.Get("bucket"); bucket != "" {
+		if parsed, err := time.ParseDuration(bucket); err == nil && parsed > 0 {
+			opts.BucketSize = parsed
+		}
+	}
+	if top, err := strconv.Atoi(q.Get("top")); err == nil && top > 0 {
+		opts.TopLimit = top
+	}
+	return opts
 }
 
 func writeJSON(w http.ResponseWriter, value interface{}) {
