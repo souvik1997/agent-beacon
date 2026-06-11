@@ -557,10 +557,10 @@ func (c Converter) PopulateCommon(event *Event, attrs map[string]interface{}) {
 	event.Model = FirstString(attrs, "gen_ai.request.model", "gen_ai.response.model", "model", "ai.model")
 	event.Repository = FirstString(attrs, "vcs.repository.url", "repository", "repo.path", "workspace.repository")
 	event.Branch = FirstString(attrs, "vcs.branch.name", "git.branch", "branch")
-	if id := FirstString(attrs, "gen_ai.conversation.id", "copilot_chat.session_id", "copilot_chat.chat_session_id", "conversation.id", "conversation_id", "session.id"); id != "" || FirstString(attrs, "cwd", "working_directory", "workspace") != "" {
+	if id := FirstString(attrs, "gen_ai.conversation.id", "beacon.session.id", "copilot_chat.session_id", "copilot_chat.chat_session_id", "conversation.id", "conversation_id", "session.id"); id != "" || FirstString(attrs, "cwd", "working_directory", "workspace") != "" {
 		event.Session = &SessionInfo{
 			ID:               id,
-			WorkingDirectory: FirstString(attrs, "cwd", "working_directory", "process.command_args.cwd", "workspace"),
+			WorkingDirectory: FirstString(attrs, "cwd", "working_directory", "beacon.session.working_directory", "process.command_args.cwd", "workspace"),
 		}
 	}
 	if name := FirstString(attrs, "tool.name", "gen_ai.tool.name", "mcp.tool.name", "function_name", "tool_name"); name != "" || ToolCommandString(attrs) != "" {
@@ -781,10 +781,10 @@ func GenAIToolFromAttrs(attrs map[string]interface{}) *GenAIToolInfo {
 
 func GenAIUsageFromAttrs(attrs map[string]interface{}) *GenAIUsageInfo {
 	usage := &GenAIUsageInfo{}
-	if value, ok := Int64Attr(attrs, "gen_ai.usage.cache_creation.input_tokens"); ok {
+	if value, ok := Int64Attr(attrs, "gen_ai.usage.cache_creation.input_tokens", "gen_ai.usage.cache_creation_input_tokens"); ok {
 		usage.CacheCreation = &GenAIUsageCacheCreationInfo{InputTokens: &value}
 	}
-	if value, ok := Int64Attr(attrs, "gen_ai.usage.cache_read.input_tokens"); ok {
+	if value, ok := Int64Attr(attrs, "gen_ai.usage.cache_read.input_tokens", "gen_ai.usage.cache_read_input_tokens"); ok {
 		usage.CacheRead = &GenAIUsageCacheReadInfo{InputTokens: &value}
 	}
 	if value, ok := Int64Attr(attrs, "gen_ai.usage.input_tokens", "llm.usage.prompt_tokens", "gen_ai.usage.prompt_tokens"); ok {
@@ -795,6 +795,9 @@ func GenAIUsageFromAttrs(attrs map[string]interface{}) *GenAIUsageInfo {
 	}
 	if value, ok := Int64Attr(attrs, "gen_ai.usage.reasoning.output_tokens"); ok {
 		usage.Reasoning = &GenAIUsageReasoningInfo{OutputTokens: &value}
+	}
+	if value, ok := FloatAttr(attrs, "gen_ai.usage.cost"); ok {
+		usage.CostUSD = &value
 	}
 	if IsZeroJSON(usage) {
 		return nil

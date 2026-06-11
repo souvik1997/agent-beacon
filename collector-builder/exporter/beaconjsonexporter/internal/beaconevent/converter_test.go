@@ -388,6 +388,78 @@ func TestEventsFromMetricTokenUsageWithoutDataPointsFallsBack(t *testing.T) {
 	}
 }
 
+func TestGenAIUsageFromAttrsNormalizesAliases(t *testing.T) {
+	tests := []struct {
+		name  string
+		attrs map[string]interface{}
+		check func(t *testing.T, usage *GenAIUsageInfo)
+	}{
+		{
+			name:  "underscore cache read alias",
+			attrs: map[string]interface{}{"gen_ai.usage.cache_read_input_tokens": int64(90)},
+			check: func(t *testing.T, usage *GenAIUsageInfo) {
+				if usage.CacheRead == nil || usage.CacheRead.InputTokens == nil || *usage.CacheRead.InputTokens != 90 {
+					t.Fatalf("cache_read = %#v, want 90", usage.CacheRead)
+				}
+			},
+		},
+		{
+			name:  "underscore cache creation alias",
+			attrs: map[string]interface{}{"gen_ai.usage.cache_creation_input_tokens": int64(30)},
+			check: func(t *testing.T, usage *GenAIUsageInfo) {
+				if usage.CacheCreation == nil || usage.CacheCreation.InputTokens == nil || *usage.CacheCreation.InputTokens != 30 {
+					t.Fatalf("cache_creation = %#v, want 30", usage.CacheCreation)
+				}
+			},
+		},
+		{
+			name:  "runtime reported cost attribute",
+			attrs: map[string]interface{}{"gen_ai.usage.cost": 0.0123},
+			check: func(t *testing.T, usage *GenAIUsageInfo) {
+				if usage.CostUSD == nil || *usage.CostUSD != 0.0123 {
+					t.Fatalf("cost_usd = %#v, want 0.0123", usage.CostUSD)
+				}
+			},
+		},
+		{
+			name:  "semconv dotted names take precedence",
+			attrs: map[string]interface{}{"gen_ai.usage.cache_read.input_tokens": int64(7), "gen_ai.usage.cache_read_input_tokens": int64(99)},
+			check: func(t *testing.T, usage *GenAIUsageInfo) {
+				if usage.CacheRead == nil || usage.CacheRead.InputTokens == nil || *usage.CacheRead.InputTokens != 7 {
+					t.Fatalf("cache_read = %#v, want semconv value 7", usage.CacheRead)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			usage := GenAIUsageFromAttrs(tt.attrs)
+			if usage == nil {
+				t.Fatalf("usage = nil, want populated usage")
+			}
+			tt.check(t, usage)
+		})
+	}
+}
+
+func TestPopulateCommonMapsBeaconSessionAttributes(t *testing.T) {
+	span, traces := newObserveSDKTraceSpan("agent.step")
+	span.Attributes().PutStr("beacon.session.id", "cloud-session-42")
+	span.Attributes().PutStr("beacon.session.working_directory", "/srv/agent")
+
+	events := NewConverter(Options{}).EventsFromTraces(traces)
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	session := events[0].Session
+	if session == nil || session.ID != "cloud-session-42" {
+		t.Fatalf("session = %#v, want beacon.session.id mapped", session)
+	}
+	if session.WorkingDirectory != "/srv/agent" {
+		t.Fatalf("working directory = %q, want beacon.session.working_directory mapped", session.WorkingDirectory)
+	}
+}
+
 func newObserveSDKTraceSpan(name string) (ptrace.Span, ptrace.Traces) {
 	traces := ptrace.NewTraces()
 	resourceSpans := traces.ResourceSpans().AppendEmpty()
