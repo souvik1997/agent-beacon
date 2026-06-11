@@ -492,6 +492,13 @@ func (c Converter) usageEventFromDataPoint(resourceAttrs map[string]interface{},
 	event := NewEvent(action, "metric", "info", HarnessName(attrs, metric.Name()), Timestamp(ts.AsTime()))
 	event.Message = metric.Name()
 	c.PopulateCommon(&event, attrs)
+	// The datapoint value is the authoritative usage for this event. Drop any
+	// gen_ai.usage.* that PopulateCommon read from merged attributes so a stray
+	// usage attribute on the resource or datapoint cannot ride along on every
+	// expanded datapoint event and inflate aggregated totals.
+	if event.GenAI != nil {
+		event.GenAI.Usage = nil
+	}
 	if action == "cost.usage" {
 		cost := value
 		if event.GenAI == nil {
@@ -779,18 +786,23 @@ func GenAIToolFromAttrs(attrs map[string]interface{}) *GenAIToolInfo {
 	return tool
 }
 
+// GenAIUsageFromAttrs normalizes runtime token usage into the canonical
+// gen_ai.usage struct. Alongside the OTel GenAI and legacy llm.usage.* semconv
+// names it accepts Claude Code's bare claude_code.llm_request span attribute
+// names (input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens)
+// so span-level usage and the per-step session drilldown carry real counts.
 func GenAIUsageFromAttrs(attrs map[string]interface{}) *GenAIUsageInfo {
 	usage := &GenAIUsageInfo{}
-	if value, ok := Int64Attr(attrs, "gen_ai.usage.cache_creation.input_tokens", "gen_ai.usage.cache_creation_input_tokens"); ok {
+	if value, ok := Int64Attr(attrs, "gen_ai.usage.cache_creation.input_tokens", "gen_ai.usage.cache_creation_input_tokens", "cache_creation_tokens"); ok {
 		usage.CacheCreation = &GenAIUsageCacheCreationInfo{InputTokens: &value}
 	}
-	if value, ok := Int64Attr(attrs, "gen_ai.usage.cache_read.input_tokens", "gen_ai.usage.cache_read_input_tokens"); ok {
+	if value, ok := Int64Attr(attrs, "gen_ai.usage.cache_read.input_tokens", "gen_ai.usage.cache_read_input_tokens", "cache_read_tokens"); ok {
 		usage.CacheRead = &GenAIUsageCacheReadInfo{InputTokens: &value}
 	}
-	if value, ok := Int64Attr(attrs, "gen_ai.usage.input_tokens", "llm.usage.prompt_tokens", "gen_ai.usage.prompt_tokens"); ok {
+	if value, ok := Int64Attr(attrs, "gen_ai.usage.input_tokens", "llm.usage.prompt_tokens", "gen_ai.usage.prompt_tokens", "input_tokens"); ok {
 		usage.InputTokens = &value
 	}
-	if value, ok := Int64Attr(attrs, "gen_ai.usage.output_tokens", "llm.usage.completion_tokens", "gen_ai.usage.completion_tokens"); ok {
+	if value, ok := Int64Attr(attrs, "gen_ai.usage.output_tokens", "llm.usage.completion_tokens", "gen_ai.usage.completion_tokens", "output_tokens"); ok {
 		usage.OutputTokens = &value
 	}
 	if value, ok := Int64Attr(attrs, "gen_ai.usage.reasoning.output_tokens"); ok {

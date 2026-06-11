@@ -144,6 +144,46 @@ func TestEventsFromTracesNormalizesClaudeAgentSDKSpan(t *testing.T) {
 	}
 }
 
+func TestEventFromSpanNormalizesClaudeCodeLLMRequestUsage(t *testing.T) {
+	// Claude Code's claude_code.llm_request span records token usage under bare
+	// attribute names (input_tokens, output_tokens, cache_read_tokens,
+	// cache_creation_tokens), not the gen_ai.usage.* semconv names. These must
+	// normalize into the canonical gen_ai.usage so the per-step session
+	// drilldown and span-level attribution carry real usage.
+	traces := ptrace.NewTraces()
+	rs := traces.ResourceSpans().AppendEmpty()
+	rs.Resource().Attributes().PutStr("service.name", "claude-code")
+	span := rs.ScopeSpans().AppendEmpty().Spans().AppendEmpty()
+	span.SetName("claude_code.llm_request")
+	span.Attributes().PutStr("session.id", "session-span")
+	span.Attributes().PutStr("model", "claude-sonnet-4-5")
+	span.Attributes().PutInt("input_tokens", 1200)
+	span.Attributes().PutInt("output_tokens", 340)
+	span.Attributes().PutInt("cache_read_tokens", 8000)
+	span.Attributes().PutInt("cache_creation_tokens", 256)
+
+	events := NewConverter(Options{}).EventsFromTraces(traces)
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	usage := events[0].GenAI.Usage
+	if usage == nil {
+		t.Fatalf("usage missing on span event: %#v", events[0].GenAI)
+	}
+	if usage.InputTokens == nil || *usage.InputTokens != 1200 {
+		t.Fatalf("input_tokens = %v, want 1200", usage.InputTokens)
+	}
+	if usage.OutputTokens == nil || *usage.OutputTokens != 340 {
+		t.Fatalf("output_tokens = %v, want 340", usage.OutputTokens)
+	}
+	if usage.CacheRead == nil || usage.CacheRead.InputTokens == nil || *usage.CacheRead.InputTokens != 8000 {
+		t.Fatalf("cache_read = %#v, want 8000", usage.CacheRead)
+	}
+	if usage.CacheCreation == nil || usage.CacheCreation.InputTokens == nil || *usage.CacheCreation.InputTokens != 256 {
+		t.Fatalf("cache_creation = %#v, want 256", usage.CacheCreation)
+	}
+}
+
 func TestEventFromSpanCapturesTraceIdentity(t *testing.T) {
 	span, traces := newObserveSDKTraceSpan("agent.step")
 	span.SetTraceID(pcommon.TraceID([16]byte{0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef}))
@@ -275,6 +315,52 @@ func TestEventsFromMetricsExpandsClaudeCodeTokenUsageDataPoints(t *testing.T) {
 	for tokenType, value := range want {
 		if got[tokenType] != value {
 			t.Fatalf("token usage %s = %d, want %d (all: %#v)", tokenType, got[tokenType], value, got)
+		}
+	}
+}
+
+func TestEventsFromMetricsTokenUsageIgnoresStrayUsageAttributes(t *testing.T) {
+	// A token.usage datapoint event must carry only the value from its own
+	// datapoint, not gen_ai.usage.* attributes that happen to ride along on the
+	// resource or datapoint. Otherwise the stray field is attached to every
+	// expanded datapoint event and double-counted by tokens.Aggregate.
+	metrics := pmetric.NewMetrics()
+	resourceMetrics := metrics.ResourceMetrics().AppendEmpty()
+	resourceMetrics.Resource().Attributes().PutStr("service.name", "claude-code")
+	// Stray usage attribute that overlaps the per-datapoint token type.
+	resourceMetrics.Resource().Attributes().PutInt("gen_ai.usage.input_tokens", 999)
+	metric := resourceMetrics.ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
+	metric.SetName("claude_code.token.usage")
+	metric.SetUnit("tokens")
+	sum := metric.SetEmptySum()
+	sum.SetAggregationTemporality(pmetric.AggregationTemporalityDelta)
+	sum.SetIsMonotonic(true)
+	ts := pcommon.NewTimestampFromTime(time.Unix(1700000200, 0).UTC())
+	for _, tokenType := range []string{"input", "output"} {
+		dp := sum.DataPoints().AppendEmpty()
+		dp.SetTimestamp(ts)
+		dp.SetIntValue(10)
+		dp.Attributes().PutStr("type", tokenType)
+	}
+
+	events := NewConverter(Options{}).EventsFromMetrics(metrics)
+	if len(events) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(events))
+	}
+	for _, event := range events {
+		usage := event.GenAI.Usage
+		if usage == nil {
+			t.Fatalf("usage missing on event: %#v", event.GenAI)
+		}
+		if usage.OutputTokens != nil {
+			// The output datapoint event must not also carry the stray input.
+			if usage.InputTokens != nil {
+				t.Fatalf("output datapoint leaked input_tokens=%d from stray attribute", *usage.InputTokens)
+			}
+			continue
+		}
+		if usage.InputTokens == nil || *usage.InputTokens != 10 {
+			t.Fatalf("input datapoint = %#v, want input_tokens=10 from datapoint value", usage)
 		}
 	}
 }
