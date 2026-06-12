@@ -196,10 +196,10 @@ func TestGetStatusDoesNotUploadManagedTelemetry(t *testing.T) {
 
 	status := GetStatus(true, logPath)
 	if !status.ManagedUpload.Enabled || !status.ManagedUpload.Managed || !status.ManagedUpload.LoggedIn {
-		t.Fatalf("unexpected managed upload status: %#v", status.ManagedUpload)
+		t.Fatalf("unexpected endpoint ingest status: %#v", status.ManagedUpload)
 	}
 	if called {
-		t.Fatal("GetStatus performed a managed upload network call")
+		t.Fatal("GetStatus performed an ingest upload network call")
 	}
 }
 
