@@ -172,6 +172,10 @@ func extractRuleTarball(r io.Reader, dir string) error {
 		return fmt.Errorf("gzip: %w", err)
 	}
 	defer gz.Close()
+	dirAbs, err := filepath.Abs(dir)
+	if err != nil {
+		return fmt.Errorf("resolve destination dir: %w", err)
+	}
 	tr := tar.NewReader(gz)
 	count := 0
 	for {
@@ -185,8 +189,18 @@ func extractRuleTarball(r io.Reader, dir string) error {
 		if hdr.Typeflag != tar.TypeReg || !strings.HasSuffix(hdr.Name, ".rule.yaml") {
 			continue
 		}
-		name := filepath.Base(hdr.Name) // flatten; ignore archive directory structure
+		// Flatten to the base name (archive directory structure is ignored) and confirm
+		// the resolved destination stays inside dir before writing — defense in depth
+		// against archive path traversal ("Zip Slip").
+		name := filepath.Base(filepath.ToSlash(hdr.Name))
 		dest := filepath.Join(dir, name)
+		destAbs, err := filepath.Abs(dest)
+		if err != nil {
+			return fmt.Errorf("resolve destination path: %w", err)
+		}
+		if destAbs != dirAbs && !strings.HasPrefix(destAbs, dirAbs+string(os.PathSeparator)) {
+			return fmt.Errorf("archive entry %q resolves outside the destination directory", hdr.Name)
+		}
 		if err := writeReaderToFile(io.LimitReader(tr, 1<<20), dest); err != nil {
 			return err
 		}

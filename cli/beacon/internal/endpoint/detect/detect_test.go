@@ -97,6 +97,25 @@ func TestInstallRejectsInvalidRule(t *testing.T) {
 	}
 }
 
+func TestInstallRejectsFailingFixture(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	src := filepath.Join(t.TempDir(), "mismatch.rule.yaml")
+	// Valid, compilable rule whose embedded fixture asserts the wrong verdict:
+	// the match condition only fires on file.read, but the fixture feeds a
+	// file.write event while expecting a match. CheckRule returns no error here,
+	// only a failing FixtureResult.
+	bad := strings.Replace(ruleWithID("mismatch-rule"), "action: file.read }", "action: file.write }", 1)
+	if err := os.WriteFile(src, []byte(bad), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := InstallFiles(true, src, false); err == nil {
+		t.Fatal("expected install to reject a rule with a failing fixture")
+	}
+	if hasRuleFiles(StoreDir(true)) {
+		t.Fatal("rule with a failing fixture must not be written to the store")
+	}
+}
+
 func TestInstallRejectsDuplicateWithoutForce(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	src := filepath.Join(t.TempDir(), "dup.rule.yaml")

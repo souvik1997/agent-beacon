@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -76,6 +78,57 @@ func TestRulesLintEmptyDir(t *testing.T) {
 	cmd, _ := newCmd()
 	if err := lintRulesPath(cmd, t.TempDir()); err == nil {
 		t.Fatalf("expected error for directory with no rule files")
+	}
+}
+
+func makeTarGz(t *testing.T, entries map[string]string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	for name, body := range entries {
+		if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(body)), Typeflag: tar.TypeReg}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tw.Write([]byte(body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+func TestExtractRuleTarballNeutralizesTraversal(t *testing.T) {
+	dir := t.TempDir()
+	// One legit entry, one path-traversal entry, and a nested-dir entry.
+	data := makeTarGz(t, map[string]string{
+		"ok.rule.yaml":                   "id: ok",
+		"../../../../tmp/evil.rule.yaml": "id: evil",
+		"pack/sub/nested.rule.yaml":      "id: nested",
+		"notes.txt":                      "ignored",
+	})
+	if err := extractRuleTarball(bytes.NewReader(data), dir); err != nil {
+		t.Fatalf("extract: %v", err)
+	}
+	// All .rule.yaml entries land flattened inside dir; nothing escapes.
+	for _, name := range []string{"ok.rule.yaml", "evil.rule.yaml", "nested.rule.yaml"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
+			t.Errorf("expected %s inside dest dir: %v", name, err)
+		}
+	}
+	// The traversal target must NOT exist outside the dest dir.
+	escaped := filepath.Join(filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(dir)))), "tmp", "evil.rule.yaml")
+	if _, err := os.Stat(escaped); err == nil {
+		t.Fatalf("traversal entry escaped the destination: %s", escaped)
+	}
+	// Non-rule files are ignored.
+	if _, err := os.Stat(filepath.Join(dir, "notes.txt")); err == nil {
+		t.Errorf("notes.txt should not be extracted")
 	}
 }
 

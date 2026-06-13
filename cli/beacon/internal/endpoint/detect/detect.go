@@ -189,8 +189,14 @@ func InstallFiles(userMode bool, src string, force bool) ([]Installed, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", p, err)
 		}
-		if _, err := threatrules.CheckRule(rule); err != nil {
+		results, err := threatrules.CheckRule(rule)
+		if err != nil {
 			return nil, fmt.Errorf("%s: %w", p, err)
+		}
+		for _, res := range results {
+			if !res.OK() {
+				return nil, fmt.Errorf("%s: fixture %s", p, res.String())
+			}
 		}
 		if (existing[rule.ID] || staged[rule.ID]) && !force {
 			return nil, fmt.Errorf("rule %q already installed (use --force to overwrite)", rule.ID)
