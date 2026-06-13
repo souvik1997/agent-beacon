@@ -96,7 +96,7 @@ func runScan(cmd *cobra.Command, args []string) error {
 	sessionFilter := strings.TrimSpace(scanOpts.session)
 	var events []asymptoteobserve.Event
 	err = dashboard.StreamEvents(runtimeLog.EffectiveLogPath, func(e schema.Event) error {
-		if sessionFilter != "" && (e.Session == nil || e.Session.ID != sessionFilter) {
+		if sessionFilter != "" && (e.Session == nil || !scanSessionMatches(e.Session.ID, sessionFilter)) {
 			return nil
 		}
 		events = append(events, e)
@@ -147,6 +147,10 @@ func runScan(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("scan found %d finding(s) at or above %q", failCount, scanOpts.failOn)
 	}
 	return nil
+}
+
+func scanSessionMatches(sessionID, query string) bool {
+	return strings.Contains(strings.ToLower(sessionID), strings.ToLower(strings.TrimSpace(query)))
 }
 
 func filterBySeverity(findings []threatrules.Finding, minRank int) []threatrules.Finding {

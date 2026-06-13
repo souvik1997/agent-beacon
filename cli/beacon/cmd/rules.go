@@ -174,7 +174,10 @@ func runRulesPull(cmd *cobra.Command, args []string) error {
 }
 
 // extractRuleTarball extracts *.rule.yaml entries from a gzipped tarball into dir. Entry
-// paths are flattened to their base name; path-traversal entries are rejected.
+// paths keep their relative archive layout so two entries that share a base name (e.g.
+// network/exfil.rule.yaml and secrets/exfil.rule.yaml) do not overwrite each other;
+// path-traversal entries are rejected. InstallFiles walks dir recursively and keys the
+// installed file on rule id, so preserving subdirectories here loses no rules.
 func extractRuleTarball(r io.Reader, dir string) error {
 	gz, err := gzip.NewReader(r)
 	if err != nil {
@@ -201,12 +204,21 @@ func extractRuleTarball(r io.Reader, dir string) error {
 		if strings.Contains(hdr.Name, "..") {
 			return fmt.Errorf("archive entry %q contains a path traversal element", hdr.Name)
 		}
-		// Flatten archive directory structure to a base name, then confirm the joined
-		// destination stays within cleanDir before any file operation (defense in depth;
-		// the same `dest` value is both validated and written).
-		dest := filepath.Join(cleanDir, filepath.Base(filepath.ToSlash(hdr.Name)))
+		// Preserve the entry's relative directory structure (rejecting absolute paths),
+		// then confirm the joined destination stays within cleanDir before any file
+		// operation (defense in depth; the same `dest` value is both validated and
+		// written). Keeping subdirectories prevents same-base-name entries from silently
+		// overwriting each other.
+		rel := filepath.Clean(filepath.FromSlash(hdr.Name))
+		if filepath.IsAbs(rel) {
+			return fmt.Errorf("archive entry %q is an absolute path", hdr.Name)
+		}
+		dest := filepath.Join(cleanDir, rel)
 		if dest != cleanDir && !strings.HasPrefix(dest, cleanDir+string(os.PathSeparator)) {
 			return fmt.Errorf("archive entry %q resolves outside the destination directory", hdr.Name)
+		}
+		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+			return err
 		}
 		if err := writeReaderToFile(io.LimitReader(tr, 1<<20), dest); err != nil {
 			return err

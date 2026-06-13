@@ -133,8 +133,8 @@ func TestExtractRuleTarballExtractsCleanEntries(t *testing.T) {
 	if err := extractRuleTarball(bytes.NewReader(data), dir); err != nil {
 		t.Fatalf("extract: %v", err)
 	}
-	// Rule entries are flattened into dir; archive directory structure is dropped.
-	for _, name := range []string{"ok.rule.yaml", "nested.rule.yaml"} {
+	// Rule entries keep their relative archive layout inside dir.
+	for _, name := range []string{"ok.rule.yaml", filepath.Join("pack", "sub", "nested.rule.yaml")} {
 		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
 			t.Errorf("expected %s inside dest dir: %v", name, err)
 		}
@@ -142,6 +142,34 @@ func TestExtractRuleTarballExtractsCleanEntries(t *testing.T) {
 	// Non-rule files are ignored.
 	if _, err := os.Stat(filepath.Join(dir, "notes.txt")); err == nil {
 		t.Errorf("notes.txt should not be extracted")
+	}
+}
+
+// TestExtractRuleTarballKeepsSameBaseNameEntries guards against the silent
+// overwrite where two archive paths sharing a base name flattened to the same
+// destination, so a pack could install fewer rules than it contained.
+func TestExtractRuleTarballKeepsSameBaseNameEntries(t *testing.T) {
+	dir := t.TempDir()
+	data := makeTarGz(t, map[string]string{
+		"network/exfil.rule.yaml": "id: network-exfil",
+		"secrets/exfil.rule.yaml": "id: secrets-exfil",
+	})
+	if err := extractRuleTarball(bytes.NewReader(data), dir); err != nil {
+		t.Fatalf("extract: %v", err)
+	}
+	// Both same-base-name entries must survive at their distinct relative paths.
+	cases := map[string]string{
+		filepath.Join("network", "exfil.rule.yaml"): "id: network-exfil",
+		filepath.Join("secrets", "exfil.rule.yaml"): "id: secrets-exfil",
+	}
+	for rel, want := range cases {
+		got, err := os.ReadFile(filepath.Join(dir, rel))
+		if err != nil {
+			t.Fatalf("expected %s to be extracted: %v", rel, err)
+		}
+		if string(got) != want {
+			t.Errorf("%s: got %q, want %q (entries overwrote each other)", rel, got, want)
+		}
 	}
 }
 

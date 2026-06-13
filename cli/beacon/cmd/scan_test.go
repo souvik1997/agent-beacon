@@ -105,6 +105,27 @@ func TestScanJSON(t *testing.T) {
 	}
 }
 
+func TestScanSessionFilterMatchesDashboardQuery(t *testing.T) {
+	secretReadMixedCaseSession := `{"timestamp":"2026-06-13T10:00:00Z","event":{"action":"file.read"},"file":{"path":".env"},"session":{"id":"Session-ABC-123"}}`
+	secretReadOtherSession := `{"timestamp":"2026-06-13T10:00:01Z","event":{"action":"file.read"},"file":{"path":".env"},"session":{"id":"session-other"}}`
+	scanFixture(t, []string{secretReadMixedCaseSession, secretReadOtherSession})
+	scanOpts.session = "abc"
+	cmd, buf := newCmd()
+	if err := runScan(cmd, nil); err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "1 finding(s) across 1 events") {
+		t.Fatalf("expected partial case-insensitive session filter to scan exactly one event, got:\n%s", out)
+	}
+	if !strings.Contains(out, "session=Session-ABC-123") {
+		t.Fatalf("expected finding from the matching session, got:\n%s", out)
+	}
+	if strings.Contains(out, "session=session-other") {
+		t.Fatalf("did not expect finding from the non-matching session, got:\n%s", out)
+	}
+}
+
 func TestScanFailOn(t *testing.T) {
 	scanFixture(t, []string{evSecretRead})
 	scanOpts.failOn = "high"

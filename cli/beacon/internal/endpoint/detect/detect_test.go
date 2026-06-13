@@ -133,6 +133,74 @@ func TestInstallRejectsDuplicateWithoutForce(t *testing.T) {
 	}
 }
 
+func TestInstallRollsBackWhenLaterWriteFails(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	srcDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(srcDir, "a.rule.yaml"), []byte(ruleWithID("a-rule")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "b.rule.yaml"), []byte(ruleWithID("b-rule")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	store, err := EnsureStore(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockedDest := filepath.Join(store, "b-rule"+ruleFileSuffix)
+	if err := os.Mkdir(blockedDest, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := InstallFiles(true, srcDir, false); err == nil {
+		t.Fatal("expected install to fail on blocked destination")
+	}
+	if _, err := os.Stat(filepath.Join(store, "a-rule"+ruleFileSuffix)); !os.IsNotExist(err) {
+		t.Fatalf("first rule should have been rolled back, stat err=%v", err)
+	}
+	if info, err := os.Stat(blockedDest); err != nil || !info.IsDir() {
+		t.Fatalf("blocked destination directory should remain, info=%v err=%v", info, err)
+	}
+}
+
+func TestForceInstallRestoresOverwrittenRuleWhenLaterWriteFails(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	initial := strings.Replace(ruleWithID("a-rule"), "title: T", "title: Old", 1)
+	initialSrc := filepath.Join(t.TempDir(), "a.rule.yaml")
+	if err := os.WriteFile(initialSrc, []byte(initial), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := InstallFiles(true, initialSrc, false); err != nil {
+		t.Fatalf("initial install: %v", err)
+	}
+
+	srcDir := t.TempDir()
+	updated := strings.Replace(ruleWithID("a-rule"), "title: T", "title: New", 1)
+	if err := os.WriteFile(filepath.Join(srcDir, "a.rule.yaml"), []byte(updated), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "b.rule.yaml"), []byte(ruleWithID("b-rule")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	store := StoreDir(true)
+	blockedDest := filepath.Join(store, "b-rule"+ruleFileSuffix)
+	if err := os.Mkdir(blockedDest, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := InstallFiles(true, srcDir, true); err == nil {
+		t.Fatal("expected force install to fail on blocked destination")
+	}
+	got, err := os.ReadFile(filepath.Join(store, "a-rule"+ruleFileSuffix))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != initial {
+		t.Fatalf("overwritten rule was not restored:\n%s", got)
+	}
+}
+
 func TestRemove(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	src := filepath.Join(t.TempDir(), "r.rule.yaml")
