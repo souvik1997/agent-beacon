@@ -20,4 +20,7 @@ func applyRuntimeState(state *State, settings Settings, creds *beaconauth.Creden
 	if state.FileOffsets == nil {
 		state.FileOffsets = map[string]int64{}
 	}
+	if state.FileIDs == nil {
+		state.FileIDs = map[string]string{}
+	}
 }

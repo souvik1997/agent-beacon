@@ -21,20 +21,21 @@ type Settings struct {
 }
 
 type State struct {
-	Enabled       bool             `json:"enabled"`
-	Managed       bool             `json:"managed"`
-	LoggedIn      bool             `json:"logged_in"`
-	UserEmail     string           `json:"user_email,omitempty"`
-	OrgName       string           `json:"org_name,omitempty"`
-	SourceID      string           `json:"source_id,omitempty"`
-	LastUploadAt  string           `json:"last_upload_at,omitempty"`
-	LastEventAt   string           `json:"last_event_at,omitempty"`
-	LastCursor    Cursor           `json:"last_cursor,omitempty"`
-	AcceptedCount int              `json:"accepted_count"`
-	RejectedCount int              `json:"rejected_count"`
-	LastError     string           `json:"last_error,omitempty"`
-	FileOffsets   map[string]int64 `json:"file_offsets,omitempty"`
-	UpdatedAt     string           `json:"updated_at,omitempty"`
+	Enabled       bool              `json:"enabled"`
+	Managed       bool              `json:"managed"`
+	LoggedIn      bool              `json:"logged_in"`
+	UserEmail     string            `json:"user_email,omitempty"`
+	OrgName       string            `json:"org_name,omitempty"`
+	SourceID      string            `json:"source_id,omitempty"`
+	LastUploadAt  string            `json:"last_upload_at,omitempty"`
+	LastEventAt   string            `json:"last_event_at,omitempty"`
+	LastCursor    Cursor            `json:"last_cursor,omitempty"`
+	AcceptedCount int               `json:"accepted_count"`
+	RejectedCount int               `json:"rejected_count"`
+	LastError     string            `json:"last_error,omitempty"`
+	FileOffsets   map[string]int64  `json:"file_offsets,omitempty"`
+	FileIDs       map[string]string `json:"file_ids,omitempty"`
+	UpdatedAt     string            `json:"updated_at,omitempty"`
 }
 
 type Cursor struct {
@@ -42,6 +43,7 @@ type Cursor struct {
 	Offset  int64  `json:"offset,omitempty"`
 	Line    int    `json:"line,omitempty"`
 	Archive string `json:"archive,omitempty"`
+	FileID  string `json:"-"`
 }
 
 type SourceMetadata struct {

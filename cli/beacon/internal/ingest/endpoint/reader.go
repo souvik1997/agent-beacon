@@ -4,10 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/ingest"
 )
@@ -35,7 +38,6 @@ func (s Source) Batches(state ingest.State, maxEvents int, maxBytes int) ([]inge
 }
 
 func readFileBatches(path string, activePath string, state ingest.State, maxEvents int, maxBytes int) ([]ingest.Batch, error) {
-	startOffset := state.FileOffsets[path]
 	file, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -44,6 +46,12 @@ func readFileBatches(path string, activePath string, state ingest.State, maxEven
 		return nil, err
 	}
 	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	fileID := fileIdentity(info)
+	startOffset := startOffsetForFile(path, activePath, state, info.Size(), fileID)
 
 	if startOffset > 0 {
 		if _, err := file.Seek(startOffset, 0); err != nil {
@@ -73,6 +81,7 @@ func readFileBatches(path string, activePath string, state ingest.State, maxEven
 				Offset:  batchEndOffset,
 				Line:    batchLine,
 				Archive: archiveName(activePath, path),
+				FileID:  fileID,
 			},
 			Events:   events,
 			Rejected: batchRejected,
@@ -130,8 +139,27 @@ func logFiles(path string) ([]string, error) {
 			archives = append(archives, filepath.Join(dir, name))
 		}
 	}
-	sort.Strings(archives)
+	sort.Slice(archives, func(i, j int) bool {
+		left, leftOK := archiveIndex(base, filepath.Base(archives[i]))
+		right, rightOK := archiveIndex(base, filepath.Base(archives[j]))
+		if leftOK && rightOK {
+			return left > right
+		}
+		return archives[i] < archives[j]
+	})
 	return append(archives, path), nil
+}
+
+func archiveIndex(base string, name string) (int, bool) {
+	suffix, ok := strings.CutPrefix(name, base+".")
+	if !ok {
+		return 0, false
+	}
+	index, err := strconv.Atoi(suffix)
+	if err != nil {
+		return 0, false
+	}
+	return index, true
 }
 
 func archiveName(activePath string, path string) string {
@@ -139,4 +167,43 @@ func archiveName(activePath string, path string) string {
 		return ""
 	}
 	return filepath.Base(path)
+}
+
+func startOffsetForFile(path string, activePath string, state ingest.State, fileSize int64, fileID string) int64 {
+	if fileID != "" && len(state.FileIDs) > 0 {
+		if state.FileIDs[path] == fileID {
+			return boundedOffset(state.FileOffsets[path], fileSize)
+		}
+		for savedPath, savedID := range state.FileIDs {
+			if savedID == fileID {
+				return boundedOffset(state.FileOffsets[savedPath], fileSize)
+			}
+		}
+		if _, knownPath := state.FileIDs[path]; knownPath {
+			return 0
+		}
+	}
+
+	if offset := boundedOffset(state.FileOffsets[path], fileSize); offset > 0 {
+		return offset
+	}
+	if path == activePath+".1" && state.FileIDs[activePath] == "" {
+		return boundedOffset(state.FileOffsets[activePath], fileSize)
+	}
+	return 0
+}
+
+func boundedOffset(offset int64, fileSize int64) int64 {
+	if offset <= 0 || offset > fileSize {
+		return 0
+	}
+	return offset
+}
+
+func fileIdentity(info os.FileInfo) string {
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return ""
+	}
+	return fmt.Sprintf("%d:%d", stat.Dev, stat.Ino)
 }

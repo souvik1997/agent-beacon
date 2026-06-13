@@ -94,7 +94,7 @@ func TestUploadPostsBatchAndPersistsCursor(t *testing.T) {
 	source := &fakeSource{
 		metadata: SourceMetadata{SourceID: "source-1", EndpointMode: "user", LogPath: "runtime.jsonl", ContentRetention: "redacted", ManagedMode: true},
 		batches: []Batch{{
-			Cursor: Cursor{LogPath: "runtime.jsonl", Offset: 128, Line: 1},
+			Cursor: Cursor{LogPath: "runtime.jsonl", Offset: 128, Line: 1, FileID: "dev:ino"},
 			Events: []json.RawMessage{json.RawMessage(`{"event":"ok"}`)},
 		}},
 	}
@@ -110,6 +110,9 @@ func TestUploadPostsBatchAndPersistsCursor(t *testing.T) {
 	}
 	if !res.Uploaded || res.State.AcceptedCount != 1 || res.State.FileOffsets["runtime.jsonl"] != 128 {
 		t.Fatalf("unexpected upload state: %#v", res.State)
+	}
+	if res.State.FileIDs["runtime.jsonl"] != "dev:ino" {
+		t.Fatalf("file identity not persisted: %#v", res.State.FileIDs)
 	}
 	if received.Source.SourceID != "source-1" || !received.Source.ManagedMode || len(received.Events) != 1 {
 		t.Fatalf("unexpected request: %#v", received)

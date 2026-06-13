@@ -46,6 +46,9 @@ func Upload(ctx context.Context, opts Options) Result {
 		if len(batch.Events) == 0 {
 			state.RejectedCount += batch.Rejected
 			state.FileOffsets[batch.Cursor.LogPath] = batch.Cursor.Offset
+			if batch.Cursor.FileID != "" {
+				state.FileIDs[batch.Cursor.LogPath] = batch.Cursor.FileID
+			}
 			continue
 		}
 		response, err := client.UploadBatch(ctx, opts.Creds.Token, uploadRequest{
@@ -65,6 +68,9 @@ func Upload(ctx context.Context, opts Options) Result {
 		state.LastEventAt = now
 		state.LastCursor = batch.Cursor
 		state.FileOffsets[batch.Cursor.LogPath] = batch.Cursor.Offset
+		if batch.Cursor.FileID != "" {
+			state.FileIDs[batch.Cursor.LogPath] = batch.Cursor.FileID
+		}
 		state.LastError = ""
 		uploaded = true
 	}

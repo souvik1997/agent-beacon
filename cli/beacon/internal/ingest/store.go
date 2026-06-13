@@ -22,12 +22,18 @@ func (s Store) Load() State {
 	if state.FileOffsets == nil {
 		state.FileOffsets = map[string]int64{}
 	}
+	if state.FileIDs == nil {
+		state.FileIDs = map[string]string{}
+	}
 	return state
 }
 
 func (s Store) Save(state State) error {
 	if state.FileOffsets == nil {
 		state.FileOffsets = map[string]int64{}
+	}
+	if state.FileIDs == nil {
+		state.FileIDs = map[string]string{}
 	}
 	if err := os.MkdirAll(filepath.Dir(s.Path), 0700); err != nil {
 		return err
@@ -40,5 +46,5 @@ func (s Store) Save(state State) error {
 }
 
 func emptyState() State {
-	return State{FileOffsets: map[string]int64{}}
+	return State{FileOffsets: map[string]int64{}, FileIDs: map[string]string{}}
 }
