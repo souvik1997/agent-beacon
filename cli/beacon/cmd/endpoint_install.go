@@ -157,6 +157,7 @@ func runEndpointStatus(cmd *cobra.Command, args []string) error {
 	} else {
 		fmt.Println("Last event: present")
 	}
+	printIngestStatus("Endpoint ingest", status.ManagedUpload)
 	return nil
 }
 

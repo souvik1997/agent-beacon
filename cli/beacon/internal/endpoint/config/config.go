@@ -22,12 +22,13 @@ const (
 )
 
 type Config struct {
-	UserMode        bool          `json:"user_mode"`
-	LogPath         string        `json:"log_path"`
-	Collector       Collector     `json:"collector"`
-	Harnesses       []string      `json:"harnesses"`
-	EventCategories []string      `json:"event_categories,omitempty"`
-	Destinations    *Destinations `json:"destinations,omitempty"`
+	UserMode        bool           `json:"user_mode"`
+	LogPath         string         `json:"log_path"`
+	Collector       Collector      `json:"collector"`
+	Harnesses       []string       `json:"harnesses"`
+	EventCategories []string       `json:"event_categories,omitempty"`
+	Destinations    *Destinations  `json:"destinations,omitempty"`
+	ManagedUpload   *ManagedUpload `json:"managed_upload,omitempty"`
 }
 
 type Collector struct {
@@ -43,6 +44,14 @@ type Collector struct {
 type Destinations struct {
 	SplunkHEC *SplunkHEC `json:"splunk_hec,omitempty"`
 	FalconHEC *FalconHEC `json:"falcon_hec,omitempty"`
+}
+
+type ManagedUpload struct {
+	Enabled          bool   `json:"enabled,omitempty"`
+	Managed          bool   `json:"managed,omitempty"`
+	IngestURL        string `json:"ingest_url,omitempty"`
+	SourceID         string `json:"source_id,omitempty"`
+	ContentRetention string `json:"content_retention,omitempty"`
 }
 
 type SplunkHEC struct {
