@@ -58,6 +58,9 @@ jobs:
       - name: Test collector exporter
         working-directory: collector-builder/exporter/beaconjsonexporter
         run: go test ./...
+      - name: Test observe SDK + threat-rules conformance
+        working-directory: pkg/asymptoteobserve
+        run: go test ./...
       - name: Public CLI command tree smoke test
         working-directory: cli/beacon
         run: |
