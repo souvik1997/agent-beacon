@@ -86,6 +86,13 @@ cd collector-builder/exporter/beaconjsonexporter
 go test ./...
 ```
 
+Run the observe SDK and threat-rules conformance tests:
+
+```bash
+cd pkg/asymptoteobserve
+go test ./...
+```
+
 Run TypeScript SDK checks:
 
 ```bash
@@ -130,7 +137,8 @@ Run the release gates before publishing:
 cd cli/beacon && go test ./...
 cd ../beacon-hooks && go test ./...
 cd ../../collector-builder/exporter/beaconjsonexporter && go test ./...
-cd ../../../packages/asymptote-sdk-js && npm test && npm run check && npm run build && npm run pack:dry-run
+cd ../../../pkg/asymptoteobserve && go test ./...
+cd ../../packages/asymptote-sdk-js && npm test && npm run check && npm run build && npm run pack:dry-run
 cd ../..
 sh packaging/macos/test-endpoint-scripts.sh
 ```
@@ -276,6 +284,7 @@ CI runs:
 - `go test -race ./internal/endpoint/...` in `cli/beacon`.
 - `go test ./...` in `cli/beacon-hooks`.
 - `go test ./...` in `collector-builder/exporter/beaconjsonexporter`.
+- `go test ./...` in `pkg/asymptoteobserve` (includes threat-rules pack conformance).
 - CLI help smoke checks for the public command tree.
 - macOS packaging script validation via `packaging/macos/test-endpoint-scripts.sh`.
 - macOS endpoint smoke validation via `packaging/macos/smoke-endpoint.sh`.
