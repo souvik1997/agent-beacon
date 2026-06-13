@@ -130,12 +130,18 @@ func logFiles(path string) ([]string, error) {
 	base := filepath.Base(path)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{path}, nil
+		}
 		return nil, err
 	}
 	var archives []string
 	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
 		name := entry.Name()
-		if strings.HasPrefix(name, base+".") {
+		if _, ok := archiveIndex(base, name); ok {
 			archives = append(archives, filepath.Join(dir, name))
 		}
 	}

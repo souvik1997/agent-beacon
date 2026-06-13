@@ -1,10 +1,12 @@
 package endpoint
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
+	beaconauth "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/auth"
 	endpointconfig "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/ingest"
 )
@@ -34,6 +36,34 @@ func TestEndpointSourceBatchesValidEventsAndMalformedRejects(t *testing.T) {
 	}
 	if batches[0].Cursor.Offset != int64(len(content)) {
 		t.Fatalf("Offset = %d, want %d", batches[0].Cursor.Offset, len(content))
+	}
+}
+
+func TestUploadTreatsMissingLogDirectoryAsNoBatches(t *testing.T) {
+	root := t.TempDir()
+	logPath := filepath.Join(root, "missing", "runtime.jsonl")
+	statePath := filepath.Join(root, "upload-state.json")
+	store := ingest.Store{Path: statePath}
+	if err := store.Save(ingest.State{LastError: "stale error"}); err != nil {
+		t.Fatal(err)
+	}
+
+	source := NewSource(endpointconfig.Config{UserMode: true, LogPath: logPath}, logPath, true)
+	res := ingest.Upload(context.Background(), ingest.Options{
+		Settings: ingest.Settings{Enabled: true, Managed: true, SourceID: "source-1"},
+		Store:    store,
+		Creds:    &beaconauth.Credentials{Token: "token", UserID: "user"},
+		Source:   source,
+	})
+
+	if res.Uploaded {
+		t.Fatalf("missing log directory should not upload: %#v", res.State)
+	}
+	if res.State.LastError != "" {
+		t.Fatalf("LastError = %q", res.State.LastError)
+	}
+	if stored := store.Load(); stored.LastError != "" {
+		t.Fatalf("persisted LastError = %q", stored.LastError)
 	}
 }
 
@@ -190,6 +220,36 @@ func TestEndpointSourceReadsRotatedArchivesOldestFirst(t *testing.T) {
 		if string(batches[i].Events[0]) != wantEvents[i] {
 			t.Fatalf("batch %d event = %s, want %s", i, batches[i].Events[0], wantEvents[i])
 		}
+	}
+}
+
+func TestEndpointSourceIgnoresWriterLockFile(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "runtime.jsonl")
+	if err := os.WriteFile(logPath+".lock", []byte("not-json\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(logPath, []byte("{\"event\":\"active\"}\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	source := NewSource(endpointconfig.Config{UserMode: true, LogPath: logPath}, logPath, true)
+	batches, err := source.Batches(ingest.State{FileOffsets: map[string]int64{}}, 500, 1024)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(batches) != 1 {
+		t.Fatalf("len(batches) = %d, want 1: %#v", len(batches), batches)
+	}
+	if batches[0].Cursor.LogPath != logPath || batches[0].Cursor.Archive != "" {
+		t.Fatalf("unexpected active cursor: %#v", batches[0].Cursor)
+	}
+	if batches[0].Rejected != 0 {
+		t.Fatalf("Rejected = %d, want 0", batches[0].Rejected)
+	}
+	if string(batches[0].Events[0]) != "{\"event\":\"active\"}" {
+		t.Fatalf("event = %s", batches[0].Events[0])
 	}
 }
 
